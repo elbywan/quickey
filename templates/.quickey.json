@@ -1,0 +1,30 @@
+[
+    {
+        "label": "Hello",
+        "description": "Prints a simple hello world.",
+        "shell": "echo \"Hello world!\""
+    },
+    {
+        "label": "Future hello",
+        "description": "Greets you in two seconds.",
+        "shell": [
+            "sleep 2 && echo \"Hello!\"",
+            { "async": true }
+        ]
+    },
+    {
+        "label": "Lists",
+        "description": "Various commands related to listing files.",
+        "fromArray": [
+            {
+                "label": "List visible files.",
+                "shell": "ls"
+            },
+            {
+                "label": "List all files with details.",
+                "key": "a",
+                "shell": "ls -al"
+            }
+        ]
+    }
+]

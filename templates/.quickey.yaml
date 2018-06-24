@@ -1,0 +1,21 @@
+---
+  # A simple shell command
+- label: Hello
+  description: Prints a simple hello world.
+  shell: echo "Hello world!"
+  # An asynchronous shell command
+- label: Future hello
+  description: Greets you in two seconds.
+  shell:
+  - sleep 2 && echo "Hello!"
+  - async: true
+  # A simple category containing lists commands
+- label: Lists
+  description: Various commands related to listing files.
+  fromArray:
+  - label: List visible files.
+    shell: ls
+    # Custom key mapping
+  - label: List all files with details.
+    key: a
+    shell: ls -al
