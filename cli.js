@@ -3,10 +3,9 @@ const path = require('path')
 const fs = require('fs')
 const chalk = require('chalk')
 const program = require('commander')
-const { printer } = require('./dist/state').state
-const { run } = require('./dist')
-
-const { version } = require('./package.json')
+const { printer } = require(path.resolve(__dirname, 'dist/state')).state
+const { run } = require(path.resolve(__dirname, './dist'))
+const { version } = require(path.resolve(__dirname, 'package.json'))
 
 program
     .version(version, '-v', '--version')
