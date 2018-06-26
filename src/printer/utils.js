@@ -77,3 +77,30 @@ export function refreshScreen (printBefore?: (Printer) => void) {
         printScreen()
     }
 }
+
+export function printCommandResult (label: string, code?: number, signal?: string, separator: string = '>>') {
+    const { printer } = state
+
+    if(code) {
+        const style = chalk.bold.red
+        printer.line(
+            style(label + ' ' + separator) +
+            ' exited with code ' +
+            '[' + style('' + code) + '] ' +
+            (state.lastErrorMessage ? ('- ' + style(state.lastErrorMessage)) : ''), false)
+    } else if(signal) {
+        const style = chalk.bold.red
+        printer.line(
+            style(label + ' ' + separator) +
+            ' exited when receiving signal ' +
+            '[' + style(signal) + '] ' +
+            (state.lastErrorMessage ? ('- ' + style(state.lastErrorMessage)) : ''), false)
+    } else {
+        const style = chalk.bold.green
+        printer.line(
+            style(label + ' ' + separator) +
+            ' exited with code ' +
+            '[' + style('0') + '] ', false)
+    }
+    printer.line('', false)
+}

@@ -29,6 +29,7 @@ if(program.init) {
     }
     fs.copyFileSync(path.resolve(__dirname, 'templates', target), targetPath)
     printer.line(chalk.bold(target + ' file created!') + '\n' + 'You can now run the `quickey` command in the current directory.')
+    process.exit(0)
 } else if(program.file) {
     run({ file: path.resolve(process.cwd(), program.file) })
 } else {

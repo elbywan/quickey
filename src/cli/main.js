@@ -55,6 +55,11 @@ export function * mainLoop (keyListener: KeyListener, { file } : loopOptions = {
             (process.stdin: any).setRawMode(false)
             if(keyEvent.ctrl && keyEvent.name === 'c') {
                 printer.clear()
+                const nbOfAsyncProcesses = state.asyncRunning.size
+                Array.from(state.asyncRunning).forEach(([ process ]) => process.kill())
+                if(nbOfAsyncProcesses > 0) {
+                    printer.line(`${nbOfAsyncProcesses} background ${nbOfAsyncProcesses > 1 ? 'processes were' : 'process was'} killed.\n`)
+                }
                 process.exit(0)
             }
         }
