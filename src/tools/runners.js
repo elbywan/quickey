@@ -46,9 +46,11 @@ export function runCommandAsync(label: string, command: string, execOptions: Obj
     })
     const buffer = new CircularStringBuffer(10)
     subprocess.stdout.on('data', data => {
+        state.asyncBuffer.push(data.toString(), chalk.bold('['+label+']') + ' >> ')
         buffer.push(data.toString())
     })
     subprocess.stderr.on('data', data => {
+        state.asyncBuffer.push(data.toString(), chalk.bold.green('['+label+']') + ' >> ')
         buffer.push(data.toString())
     })
     subprocess.on('error', error => {
@@ -62,8 +64,11 @@ export function runCommandAsync(label: string, command: string, execOptions: Obj
 
         if(state.current._id === 'background-processes') {
             pop()
-            const cmd = specialCommands.find(cmd => cmd.key === 'escape')
-            cmd.action()
+            if(state.asyncRunning.size > 0) {
+                const cmd = specialCommands.find(cmd => cmd.key === 'return')
+                cmd && cmd.action()
+            }
+            require('../index').loop.next([])
         }
         refreshScreen(() => {
             printer.line(buffer.get().join('\n'), false)

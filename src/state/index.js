@@ -4,6 +4,7 @@ import type { Printer } from '../printer'
 import type { Category } from '../quickey/category'
 import { Quickey } from '../quickey'
 import { TTYPrinter } from '../printer'
+import { CircularStringBuffer } from '../tools'
 
 // $FlowFixMe
 export const state : {
@@ -12,14 +13,16 @@ export const state : {
     printer: Printer,
     lastCode?: number,
     lastErrorMessage?: string,
-    asyncRunning: Map<ChildProcess, { label: string, command: string }>
+    asyncRunning: Map<ChildProcess, { label: string, command: string }>,
+    asyncBuffer: CircularStringBuffer
 } = {
     parents: [],
     quickey: null,
     printer: new TTYPrinter(),
     lastCode: 0,
     lastErrorMessage: '',
-    asyncRunning: new Map()
+    asyncRunning: new Map(),
+    asyncBuffer: new CircularStringBuffer(100)
 }
 
 export function getColors() {

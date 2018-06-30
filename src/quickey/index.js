@@ -12,7 +12,12 @@ export class Quickey {
         inheritOptions: true,
         useCurrentShell: false,
         colors: {
-            breadcrumbs: 'white',
+            breadcrumbs: {
+                current: 'blue',
+                currentDescription: 'white',
+                parents: 'white',
+                separator: 'white'
+            },
             keys: {
                 matching: 'green',
                 notMatching: 'red',

@@ -19,10 +19,11 @@
     "clean": "rimraf dist",
     "prebuild": "npm run flow; npm run flow:stop",
     "flow": "flow",
-    "flow:stop": "flow stop",
+    "flow:stop": "flow stop || true",
     "flow:coverage": "flow-coverage-report -i 'src/**/*.js' --threshold 70",
     "build": "babel src -d dist",
-    "serve": "node dist/index.js",
+    "serve": "node cli.js",
+    "dev": "node --inspect cli.js",
     "watch": "npm-watch"
   },
   "author": "Julien Elbaz",

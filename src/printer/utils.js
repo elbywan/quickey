@@ -2,7 +2,7 @@
 import chalk from 'chalk'
 
 import type { Printer } from '../printer'
-import { state } from '../state'
+import { state, getColors } from '../state'
 import { specialCommands } from '../state/special'
 import type { Item } from '../quickey/Item'
 
@@ -14,19 +14,20 @@ export function printScreen (keyMap?: Map<string, Item>) {
         keyMap = state.current._getKeyMap()
     }
 
-    const { colors } = state.current._options
+    const colors = getColors()
     const { printer } = state
 
     // Breadcrumbs //
+    const breadcrumbsColors = colors.breadcrumbs
     printer
         .line()
         .line(
             '    ' +
             state.parents
-                .map(q => c.bold[colors.breadcrumbs](q._category) + c.bold[colors.breadcrumbs](' > '))
+                .map(q => c.bold[breadcrumbsColors.parents](q._category) + c.bold[breadcrumbsColors.separator](' > '))
                 .join('') +
-            c.bold[colors.breadcrumbs](state.current._category) +
-            (state.current._description ? (': ' + c[colors.breadcrumbs](state.current._description)) : '')
+            c.bold[breadcrumbsColors.current](state.current._category) +
+            (state.current._description ? (': ' + c[breadcrumbsColors.currentDescription](state.current._description)) : '')
         )
         .line()
 
@@ -57,7 +58,7 @@ export function printScreen (keyMap?: Map<string, Item>) {
             text += command.text() + ', '
         }
         return text
-    }, '    ') + `${c[colors.extraComands]('ctrl-c')} : exit.`)
+    }, '    ') + `${c[colors.extraComands]('ctrl-c')}: exit.`)
     // Current working directory
     printer
         .line('    ' + c.magenta('cwd: ') + (state.current._cwd || process.cwd()))

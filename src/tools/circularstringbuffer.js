@@ -19,10 +19,11 @@ export class CircularStringBuffer {
         return buf
     }
 
-    push(chunk: string) {
+    push(chunk: string, prefix?: string) {
         const lines = chunk.split('\n')
         lines.forEach(line => {
-            this._buffer[this._index] = line
+            if(!line) return
+            this._buffer[this._index] = (prefix || '') + line
             this._index = (this._index + 1) % this._buffer.length
         })
     }

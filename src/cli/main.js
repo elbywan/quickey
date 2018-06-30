@@ -11,9 +11,14 @@ import { printScreen } from '../printer'
 const { printer } = state
 
 type KeyListener = (key: string, keyEvent: Object) => void
-type loopOptions = { file?: string }
+type LoopOptions = { file?: string }
+type KeyEventArray = Array<any>
+type GeneratorYield = LoopOptions | KeyEventArray
 
-export function * mainLoop (keyListener: KeyListener, { file } : loopOptions = {}): Generator<*, *, *> {
+export function * mainLoop (keyListener: KeyListener): Generator<*, *, GeneratorYield> {
+    const options = yield
+    const { file } = !(options instanceof Array) && options || {}
+
     const quickey: Quickey = new Quickey(chalk.bgBlack.white(' Quickey '), chalk.white('Press the colored key to execute the command'))
     const configFile = getInitConfigFile(quickey, file)
 
@@ -48,10 +53,16 @@ export function * mainLoop (keyListener: KeyListener, { file } : loopOptions = {
         // Keypress loop //
         let keyPress = ''
         let keyEvent = {}
-        while(!keyMap.has(keyPress) && !specialCommands.some(cmd => cmd.key === keyEvent.name)) {
+        let itemMatch = null
+        let cmdMatch = null
+        while(!itemMatch && !cmdMatch) {
             process.stdin.once('keypress', keyListener);
             (process.stdin: any).setRawMode(true);
             [ keyPress, keyEvent ] = yield
+            if(!keyPress || !keyEvent) {
+                process.stdin.removeListener('keypress', keyListener)
+                break
+            }
             (process.stdin: any).setRawMode(false)
             if(keyEvent.ctrl && keyEvent.name === 'c') {
                 printer.clear()
@@ -62,16 +73,16 @@ export function * mainLoop (keyListener: KeyListener, { file } : loopOptions = {
                 }
                 process.exit(0)
             }
+            itemMatch = keyMap.get(keyPress)
+            cmdMatch = specialCommands.find(cmd => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
         }
         // Action //
         printer.clear()
-        const cmd = specialCommands.find(cmd => cmd.key === keyEvent.name)
-        if(cmd) {
-            if(!cmd.conditional || cmd.conditional())
-                cmd.action()
-        } else {
-            const item = keyMap.get(keyPress)
-            item && item._action()
+        if(cmdMatch) {
+            if(!cmdMatch.conditional || cmdMatch.conditional())
+                cmdMatch.action()
+        } else if(itemMatch) {
+            itemMatch && itemMatch._action()
         }
     }
 }
