@@ -1571,6 +1571,396 @@ action('Timestamped Build')
 - The `{{output}}` placeholder is replaced in commands, hooks, env vars, and notifications
 - Captured output is available throughout the entire action lifecycle
 
+## Templates/Reusable Commands
+
+Create reusable command templates to share common configurations across multiple actions. Templates allow you to define base configurations once and apply them to many actions, reducing duplication and ensuring consistency.
+
+### Basic Templates
+
+Define a template and apply it to actions using `fromTemplate()`:
+
+```javascript
+export default function(q) {
+  // Define a base git template
+  const gitTemplate = q.action()
+    .before('git fetch')
+    .env('GIT_USER', 'CI Bot')
+    .in('./repo')
+  
+  // Apply template to multiple actions
+  q.action('Push')
+    .fromTemplate(gitTemplate)
+    .shell('git push origin main')
+  
+  q.action('Pull')
+    .fromTemplate(gitTemplate)
+    .shell('git pull origin main')
+  
+  q.action('Status')
+    .fromTemplate(gitTemplate)
+    .shell('git status')
+}
+```
+
+### Stored Templates
+
+Use `template()` to create and store templates globally:
+
+```javascript
+export default function(q) {
+  // Create and store templates
+  q.template('git-base')
+    .before('git fetch')
+    .env('GIT_USER', 'CI Bot')
+    .in('./repo')
+  
+  q.template('deploy-base')
+    .requireConfirmation('Proceed with deployment?')
+    .before(() => console.log('Starting deployment...'))
+    .after(() => console.log('Deployment complete!'))
+    .env('DEPLOY_USER', process.env.USER)
+  
+  // Use stored templates
+  q.action('Push')
+    .fromTemplate(q.getTemplate('git-base'))
+    .shell('git push')
+  
+  q.action('Deploy Staging')
+    .fromTemplate(q.getTemplate('deploy-base'))
+    .prompt('version', 'Version')
+    .shell('deploy.sh staging {{version}}')
+}
+```
+
+### What Gets Copied
+
+Templates copy all configuration to the target action:
+
+**Prepended (template first):**
+- Before hooks
+- Prompts
+- Error handlers (from `onError()`)
+
+**Appended (action first):**
+- After hooks
+
+**Merged (action overrides):**
+- Shell options
+- Environment variables
+
+**If not set (action takes precedence):**
+- Confirmation message
+- Working directory
+- Capture flag
+- Silent flag
+- Notify message
+- Condition
+
+```javascript
+// Template with various configurations
+const baseTemplate = q.action()
+  .before('echo "Setup"')
+  .after('echo "Cleanup"')
+  .env('NODE_ENV', 'production')
+  .in('./dist')
+  .requireConfirmation('Proceed?')
+
+// Action using template
+q.action('Deploy')
+  .fromTemplate(baseTemplate)
+  .before('echo "Pre-deploy"')        // Runs after template's before
+  .after('echo "Post-deploy"')        // Runs before template's after
+  .env('API_KEY', 'secret')           // Merged with template env
+  .in('./override')                   // Overrides template directory
+  .requireConfirmation('Deploy now?') // Overrides template confirmation
+  .shell('deploy.sh')
+
+// Execution order:
+// 1. Before: "Setup" (template)
+// 2. Before: "Pre-deploy" (action)
+// 3. Main: deploy.sh
+// 4. After: "Post-deploy" (action)
+// 5. After: "Cleanup" (template)
+```
+
+### Multiple Templates
+
+Apply multiple templates to build complex configurations:
+
+```javascript
+export default function(q) {
+  // Base templates
+  const loggingTemplate = q.action()
+    .before(() => console.log('Started'))
+    .after(() => console.log('Finished'))
+  
+  const gitTemplate = q.action()
+    .before('git fetch')
+    .in('./repo')
+  
+  const dockerTemplate = q.action()
+    .env('DOCKER_BUILDKIT', '1')
+    .before('docker login')
+  
+  // Combine multiple templates
+  q.action('Deploy')
+    .fromTemplate(loggingTemplate)
+    .fromTemplate(gitTemplate)
+    .fromTemplate(dockerTemplate)
+    .shell('docker build . && docker push')
+    // Has logging, git setup, and docker config
+}
+```
+
+### Dynamic Templates
+
+Create templates with functions for dynamic behavior:
+
+```javascript
+export default function(q) {
+  // Parameterized template factory
+  const deployTemplate = (env) => q.action()
+    .env('DEPLOY_ENV', env)
+    .requireConfirmation(`Deploy to ${env}?`)
+    .before(`echo "Deploying to ${env}"`)
+    .after(`curl https://${env}.example.com/health`)
+  
+  // Use dynamic templates
+  q.action('Deploy Dev')
+    .fromTemplate(deployTemplate('development'))
+    .shell('deploy.sh')
+  
+  q.action('Deploy Prod')
+    .fromTemplate(deployTemplate('production'))
+    .shell('deploy.sh')
+  
+  // Conditional template
+  const ciTemplate = () => {
+    const base = q.action()
+      .env('CI', 'true')
+      .silent()
+    
+    if (process.env.CI_DEBUG) {
+      base.before('env | grep CI')
+    }
+    
+    return base
+  }
+  
+  q.action('CI Build')
+    .fromTemplate(ciTemplate())
+    .shell('npm run build')
+}
+```
+
+### Template Composition
+
+Templates can use other templates:
+
+```javascript
+export default function(q) {
+  // Base templates
+  const loggingTemplate = q.action()
+    .before(() => console.log('Start'))
+    .after(() => console.log('End'))
+  
+  const errorHandlingTemplate = q.action()
+    .onError(() => console.error('Failed'))
+    .onError('notify-send "Build failed"')
+  
+  // Composite template
+  const buildTemplate = q.action()
+    .fromTemplate(loggingTemplate)
+    .fromTemplate(errorHandlingTemplate)
+    .env('NODE_ENV', 'production')
+    .before('npm install')
+  
+  // Use composite
+  q.action('Build Frontend')
+    .fromTemplate(buildTemplate)
+    .in('./frontend')
+    .shell('npm run build')
+  
+  q.action('Build Backend')
+    .fromTemplate(buildTemplate)
+    .in('./backend')
+    .shell('npm run build')
+}
+```
+
+### Common Template Patterns
+
+**Error Handling Template:**
+```javascript
+const errorHandlerTemplate = q.action()
+  .onError('echo "Command failed"')
+  .onError(() => console.error('Error occurred'))
+  .onError('notify-send "Error" "Command failed"')
+  .after((code) => {
+    if (code !== 0) {
+      console.log('Cleaning up after error...')
+    }
+  })
+
+q.action('Deploy')
+  .fromTemplate(errorHandlerTemplate)
+  .shell('deploy.sh')
+```
+
+**Git Operations Template:**
+```javascript
+const gitTemplate = q.action()
+  .before('git fetch')
+  .before('git status')
+  .condition(commandSucceeds('git rev-parse --git-dir'))
+  .env('GIT_TERMINAL_PROMPT', '0')
+  .in('./repo')
+
+q.action('Pull').fromTemplate(gitTemplate).shell('git pull')
+q.action('Push').fromTemplate(gitTemplate).shell('git push')
+q.action('Sync').fromTemplate(gitTemplate).shell('git pull && git push')
+```
+
+**Docker Build Template:**
+```javascript
+const dockerTemplate = q.action()
+  .before('docker login')
+  .env({
+    DOCKER_BUILDKIT: '1',
+    COMPOSE_DOCKER_CLI_BUILD: '1'
+  })
+  .capture()
+  .shell('git rev-parse --short HEAD')
+  .notify('Built image with tag {{output}}')
+
+q.action('Build API')
+  .fromTemplate(dockerTemplate)
+  .in('./api')
+  .shell('docker build -t api:{{output}} .')
+
+q.action('Build Worker')
+  .fromTemplate(dockerTemplate)
+  .in('./worker')
+  .shell('docker build -t worker:{{output}} .')
+```
+
+**Test Template:**
+```javascript
+const testTemplate = q.action()
+  .env({
+    NODE_ENV: 'test',
+    CI: 'true'
+  })
+  .before('docker-compose up -d')
+  .after('docker-compose down')
+  .onError('docker-compose logs')
+  .after((code) => {
+    console.log(`Tests ${code === 0 ? 'passed' : 'failed'}`)
+  })
+
+q.action('Unit Tests')
+  .fromTemplate(testTemplate)
+  .shell('npm run test:unit')
+
+q.action('Integration Tests')
+  .fromTemplate(testTemplate)
+  .shell('npm run test:integration')
+```
+
+**Deployment Template:**
+```javascript
+const deployTemplate = q.action()
+  .requireConfirmation('Proceed with deployment?')
+  .before('git pull')
+  .before('npm install')
+  .before('npm run build')
+  .shell('pm2 restart app')
+  .then('curl http://localhost:3000/health')
+  .onError('git reset --hard HEAD~1')
+  .onError('pm2 restart app')
+  .after(() => console.log('Deployment complete'))
+  .notify('Deployment finished!')
+
+q.action('Deploy Staging')
+  .fromTemplate(deployTemplate)
+  .env('NODE_ENV', 'staging')
+  .in('/var/www/staging')
+
+q.action('Deploy Production')
+  .fromTemplate(deployTemplate)
+  .env('NODE_ENV', 'production')
+  .in('/var/www/production')
+```
+
+### Integration with Other Features
+
+Templates work seamlessly with all Quickey features:
+
+```javascript
+export default function(q) {
+  // Template with prompts
+  const promptedTemplate = q.action()
+    .prompt('version', 'Version number')
+    .prompt('message', 'Commit message')
+  
+  q.action('Commit and Tag')
+    .fromTemplate(promptedTemplate)
+    .shell('git commit -m "{{message}}"')
+    .then('git tag v{{version}}')
+  
+  // Template with conditions
+  const prodTemplate = q.action()
+    .requireConfirmation('Deploy to production?')
+    .condition(envEquals('NODE_ENV', 'production'))
+    .env('DEPLOY_ENV', 'production')
+  
+  q.action('Prod Deploy')
+    .fromTemplate(prodTemplate)
+    .shell('deploy.sh')
+  
+  // Template with chaining
+  const ciTemplate = q.action()
+    .before('npm install')
+    .then('npm run lint')
+    .then('npm test')
+    .then('npm run build')
+    .onError('echo "CI failed"')
+  
+  q.action('CI Pipeline')
+    .fromTemplate(ciTemplate)
+    .shell('echo "Starting CI"')
+  
+  // Template with output handling
+  const outputTemplate = q.action()
+    .capture()
+    .notify('Completed: {{output}}')
+  
+  q.action('Get Version')
+    .fromTemplate(outputTemplate)
+    .shell('npm version | grep "my-app"')
+}
+```
+
+### How Templates Work
+
+- **fromTemplate()**: Copies configuration from template to action
+- **Chainable**: Returns `this` for method chaining
+- **Flexible**: Accepts Action instances or factory functions
+- **Composable**: Multiple templates can be applied to one action
+- **Safe**: Action-specific settings override template defaults
+- **No mutation**: Templates are not modified when applied
+- **Merge strategies**: Different properties use different merge approaches
+
+### Tips
+
+- Use templates to standardize common workflows (git, deploy, test, etc.)
+- Store frequently used templates with `template()` for easy access
+- Use factory functions for parameterized templates
+- Combine multiple templates for complex configurations
+- Action-specific settings always take precedence over template settings
+- Templates are great for enforcing best practices across teams
+- Consider creating a library of templates for your project
+
 ## Usage
 
 ```bash

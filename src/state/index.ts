@@ -38,6 +38,7 @@ export const state: {
     searchMode: boolean;
     searchQuery: string;
     commandHistory: HistoryEntry[];
+    templates: Map<string, any>;
 } = {
     parents: [],
     current: null as any,
@@ -50,7 +51,8 @@ export const state: {
     asyncBuffer: new CircularStringBuffer(100),
     searchMode: false,
     searchQuery: '',
-    commandHistory: []
+    commandHistory: [],
+    templates: new Map()
 }
 
 export function getColors() {

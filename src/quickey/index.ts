@@ -99,6 +99,16 @@ export class Quickey {
         return this
     }
 
+    template(name: string): Action {
+        const templateAction = new Action(`[template:${name}]`)
+        state.templates.set(name, templateAction)
+        return templateAction
+    }
+
+    getTemplate(name: string): Action | undefined {
+        return state.templates.get(name)
+    }
+
     /* Internal */
 
     _filterItemsBySearch(items: Item[], query: string): Item[] {

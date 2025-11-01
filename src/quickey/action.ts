@@ -659,4 +659,118 @@ export class Action extends Item {
         this._notifyMessage = message
         return this
     }
+
+    /**
+     * Copy configuration from a template action
+     * Allows reusing common patterns and configurations across multiple actions
+     *
+     * @param template - An Action instance or a function that returns an Action
+     *
+     * @example
+     * // Create a template action
+     * const gitTemplate = new Action('template')
+     *   .before('git fetch')
+     *   .after('git status')
+     *   .env('GIT_PAGER', 'cat')
+     *
+     * // Apply template to multiple actions
+     * action('Pull')
+     *   .fromTemplate(gitTemplate)
+     *   .shell('git pull')
+     *
+     * action('Checkout')
+     *   .fromTemplate(gitTemplate)
+     *   .prompt('branch', 'Branch name')
+     *   .shell('git checkout {{branch}}')
+     *
+     * // Use function for dynamic templates
+     * const deployTemplate = (env: string) => new Action('template')
+     *   .requireConfirmation(`Deploy to ${env}?`)
+     *   .before('npm run build')
+     *   .env('NODE_ENV', env)
+     *   .notify(`Deployed to ${env}!`)
+     *
+     * action('Deploy Staging')
+     *   .fromTemplate(deployTemplate('staging'))
+     *   .shell('./deploy.sh staging')
+     *
+     * // Combine multiple templates
+     * const loggingTemplate = new Action('template')
+     *   .before(() => console.log('Starting...'))
+     *   .after(() => console.log('Done!'))
+     *
+     * const errorHandling = new Action('template')
+     *   .onError('echo "Failed!"')
+     *
+     * action('Complex Task')
+     *   .fromTemplate(loggingTemplate)
+     *   .fromTemplate(errorHandling)
+     *   .shell('npm test')
+     */
+    fromTemplate(template: Action | (() => Action)): this {
+        const templateAction = typeof template === 'function' ? template() : template
+
+        // Copy all configuration from template
+        // Shell options
+        if (Object.keys(templateAction._shellOptions).length > 0) {
+            this._shellOptions = mix(this._shellOptions, templateAction._shellOptions)
+        }
+
+        // Prompts (prepend template prompts before existing ones)
+        if (templateAction._prompts.length > 0) {
+            this._prompts = [...templateAction._prompts, ...this._prompts]
+        }
+
+        // Confirmation (only if not already set)
+        if (templateAction._confirmMessage && !this._confirmMessage) {
+            this._confirmMessage = templateAction._confirmMessage
+            this._confirmDefault = templateAction._confirmDefault
+        }
+
+        // Before hooks (prepend template hooks before existing ones)
+        if (templateAction._beforeHooks.length > 0) {
+            this._beforeHooks = [...templateAction._beforeHooks, ...this._beforeHooks]
+        }
+
+        // After hooks (append template hooks after existing ones)
+        if (templateAction._afterHooks.length > 0) {
+            this._afterHooks = [...this._afterHooks, ...templateAction._afterHooks]
+        }
+
+        // Error handlers in chains (prepend)
+        if (templateAction._chains.length > 0) {
+            const errorHandlers = templateAction._chains.filter(chain => chain.onError)
+            this._chains = [...errorHandlers, ...this._chains]
+        }
+
+        // Environment variables
+        if (Object.keys(templateAction._envVars).length > 0) {
+            this._envVars = { ...templateAction._envVars, ...this._envVars }
+        }
+
+        // Working directory (only if not already set)
+        if (templateAction._workingDir && !this._workingDir) {
+            this._workingDir = templateAction._workingDir
+        }
+
+        // Output handling flags (only if not already set)
+        if (templateAction._captureOutput && !this._captureOutput) {
+            this._captureOutput = true
+        }
+        if (templateAction._silentOutput && !this._silentOutput) {
+            this._silentOutput = true
+        }
+
+        // Notification message (only if not already set)
+        if (templateAction._notifyMessage && !this._notifyMessage) {
+            this._notifyMessage = templateAction._notifyMessage
+        }
+
+        // Condition (only if not already set)
+        if (templateAction._condition && !this._condition) {
+            this._condition = templateAction._condition
+        }
+
+        return this
+    }
 }
