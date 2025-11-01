@@ -104,6 +104,19 @@ export class Quickey {
     _getKeyMap(): Map<string, Item> {
         const keyMap: Map<string, Item> = new Map()
 
+        // Filter items based on their conditions
+        const filterByCondition = (item: Item): boolean => {
+            if (!item._condition) {
+                return true
+            }
+            try {
+                return item._condition()
+            } catch (e) {
+                // If condition throws an error, hide the item
+                return false
+            }
+        }
+
         const fillRegularKeysAndFilter = (acc: Item[], item: Item): Item[] => {
             const key = (item._key && item._key.toLowerCase()) || item._label.charAt(0).toLowerCase()
             if (!keyMap.has(key)) {
@@ -146,6 +159,7 @@ export class Quickey {
         };
 
         [...this._items, ...this._persistentItems]
+            .filter(filterByCondition)
             .reduce(fillRegularKeysAndFilter, [])
             .forEach(fillAlternativeKeys)
         return keyMap

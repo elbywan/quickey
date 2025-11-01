@@ -334,6 +334,198 @@ action('reset-db')
 - Works with both shell commands and JavaScript functions
 - Note: Chaining is not supported with async commands
 
+## Conditional Actions
+
+Show or hide actions and categories dynamically based on runtime conditions like environment variables, file existence, or command availability. Conditions are evaluated each time the menu is displayed.
+
+### Basic Conditions
+
+```javascript
+// Show only in development mode
+action('dev-server')
+  .shell('npm run dev')
+  .condition(() => process.env.NODE_ENV === 'development')
+
+// Show only when Docker is installed
+action('docker-compose')
+  .shell('docker-compose up')
+  .condition(() => {
+    try {
+      require('child_process').execSync('command -v docker', { stdio: 'ignore' })
+      return true
+    } catch {
+      return false
+    }
+  })
+
+// Show only when a file exists
+action('migrate')
+  .shell('npm run migrate')
+  .condition(() => require('fs').existsSync('migrations'))
+```
+
+### Condition Helpers
+
+Quickey provides helper functions for common condition checks:
+
+```javascript
+import { 
+  envExists, 
+  envEquals, 
+  fileExists, 
+  commandExists,
+  commandSucceeds,
+  not, 
+  and, 
+  or 
+} from 'quickey'
+
+// Check environment variables
+action('deploy-prod')
+  .shell('npm run deploy')
+  .condition(envEquals('NODE_ENV', 'production'))
+
+action('staging-only')
+  .shell('npm run deploy:staging')
+  .condition(envExists('STAGING_KEY'))
+
+// Check file/directory existence
+action('run-migrations')
+  .shell('npm run migrate')
+  .condition(fileExists('migrations/pending'))
+
+action('build-docker')
+  .shell('docker build .')
+  .condition(fileExists('Dockerfile'))
+
+// Check command availability
+action('git-push')
+  .shell('git push')
+  .condition(commandExists('git'))
+
+action('deploy-heroku')
+  .shell('git push heroku main')
+  .condition(commandExists('heroku'))
+
+// Check if command succeeds (exit code 0)
+action('git-status')
+  .shell('git status')
+  .condition(commandSucceeds('git rev-parse --git-dir'))
+
+// Use in categories
+category('Docker Commands')
+  .condition(commandExists('docker'))
+  .content(q => {
+    q.action('up').shell('docker-compose up')
+    q.action('down').shell('docker-compose down')
+  })
+```
+
+### Logical Operators
+
+Combine multiple conditions using logical operators:
+
+```javascript
+// NOT - Invert a condition
+action('setup-env')
+  .shell('cp .env.example .env')
+  .condition(not(fileExists('.env')))
+
+// AND - All conditions must be true
+action('deploy')
+  .shell('npm run deploy')
+  .condition(and(
+    envEquals('NODE_ENV', 'production'),
+    fileExists('dist'),
+    commandExists('aws')
+  ))
+
+// OR - At least one condition must be true
+action('test')
+  .shell('npm test')
+  .condition(or(
+    envEquals('NODE_ENV', 'development'),
+    envEquals('NODE_ENV', 'test')
+  ))
+
+// Complex nested conditions
+action('prod-deploy')
+  .shell('npm run deploy:production')
+  .condition(and(
+    or(
+      envEquals('CI', 'true'),
+      envEquals('NODE_ENV', 'production')
+    ),
+    fileExists('dist/bundle.js'),
+    not(fileExists('.maintenance'))
+  ))
+```
+
+### Practical Examples
+
+```javascript
+export default function(q) {
+  // Development-only commands
+  action('hot-reload')
+    .shell('npm run dev')
+    .condition(envEquals('NODE_ENV', 'development'))
+
+  // Production-only commands
+  action('deploy')
+    .requireConfirmation('Deploy to production?')
+    .shell('npm run deploy')
+    .condition(and(
+      envEquals('NODE_ENV', 'production'),
+      fileExists('dist')
+    ))
+
+  // Git operations (only in git repos)
+  category('Git')
+    .condition(commandSucceeds('git rev-parse --git-dir'))
+    .content(q => {
+      q.action('status').shell('git status')
+      q.action('pull').shell('git pull')
+      q.action('push').shell('git push')
+    })
+
+  // Docker commands (only when Docker is available)
+  category('Docker')
+    .condition(commandExists('docker'))
+    .content(q => {
+      q.action('ps').shell('docker ps')
+      q.action('compose up').shell('docker-compose up -d')
+      q.action('compose down').shell('docker-compose down')
+    })
+
+  // Show initialization wizard only when not configured
+  action('setup')
+    .shell('npm run setup')
+    .condition(not(fileExists('.env')))
+
+  // Platform-specific commands
+  action('open-app')
+    .shell(process.platform === 'darwin' ? 'open .' : 'xdg-open .')
+    .condition(() => ['darwin', 'linux'].includes(process.platform))
+
+  // Conditional on multiple factors
+  action('backup-and-deploy')
+    .shell('npm run backup && npm run deploy')
+    .condition(and(
+      envEquals('NODE_ENV', 'production'),
+      fileExists('backups'),
+      commandExists('rsync'),
+      not(fileExists('.maintenance'))
+    ))
+}
+```
+
+### How Conditions Work
+- Conditions are evaluated every time the menu is rendered
+- If a condition returns `false`, the action/category is hidden from the menu
+- If a condition throws an error, the item is hidden (fail-safe behavior)
+- Conditions don't affect execution - they only control visibility
+- Use conditions with prompts, confirmations, and chaining for powerful workflows
+
 ## Usage
 
 ```bash

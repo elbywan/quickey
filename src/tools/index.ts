@@ -14,6 +14,16 @@ export {
     type ConfirmPromptDefinition,
     type PasswordPromptDefinition
 } from './prompt.js'
+export {
+    envExists,
+    envEquals,
+    fileExists,
+    commandExists,
+    commandSucceeds,
+    not,
+    and,
+    or
+} from './conditions.js'
 
 export const trim = (str: string | string[], ...params: string[]): string => {
     let fullStr = str instanceof Array ? str[0] : str

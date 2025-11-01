@@ -47,6 +47,29 @@ export default quickey => {
         .password('token', 'API Token')
         .shell('echo "Token: {{token}}" | wc -c')
 
+    // Action with require confirmation (safety gate)
+    quickey
+        .action('Reset Database')
+        .description('Reset the database (destructive!).')
+        .requireConfirmation('Are you sure? This will delete all data!')
+        .shell('npm run db:reset')
+
+    // Action with command chaining
+    quickey
+        .action('Build and Test')
+        .description('Build and run tests.')
+        .shell('npm run build')
+        .then('npm test')
+        .then('echo "All checks passed!"')
+        .onError('echo "Build or tests failed!"')
+
+    // Conditional action (only shows in development)
+    quickey
+        .action('Dev Server')
+        .description('Start development server.')
+        .shell('npm run dev')
+        .condition(() => process.env.NODE_ENV === 'development')
+
     // A simple category containing lists commands
     quickey
         .category('Lists')
@@ -62,4 +85,24 @@ export default quickey => {
                 .key('a')
                 .shell('ls -al')
         })
+
+    // Conditional category with helper functions (requires importing helpers)
+    // Import helpers: import { fileExists, commandExists } from 'quickey'
+    /*
+    quickey
+        .category('Docker')
+        .description('Docker commands.')
+        .condition(() => {
+            try {
+                require('child_process').execSync('command -v docker', { stdio: 'ignore' })
+                return true
+            } catch {
+                return false
+            }
+        })
+        .content(quickey => {
+            quickey.action('Docker PS').shell('docker ps')
+            quickey.action('Docker Images').shell('docker images')
+        })
+    */
 }
