@@ -37,6 +37,9 @@ export class Action extends Item {
     _beforeHooks: Hook[] = []
     _afterHooks: Hook[] = []
     _workingDir?: string
+    _captureOutput: boolean = false
+    _silentOutput: boolean = false
+    _notifyMessage?: string
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -93,8 +96,14 @@ export class Action extends Item {
                 }
             }
 
-            // Merge shell options with env options
+            // Merge shell options with env options and apply output handling flags
             const finalOptions = mix(this._shellOptions, envOptions)
+            if (this._captureOutput) {
+                finalOptions.capture = true
+            }
+            if (this._silentOutput) {
+                finalOptions.silent = true
+            }
 
             // Execute before hooks
             if (this._beforeHooks.length > 0) {
@@ -116,6 +125,10 @@ export class Action extends Item {
                     return
                 } else {
                     runCommand(this._label, command, finalOptions)
+                    // Add captured output to prompt values for use in chains/hooks/notifications
+                    if (this._captureOutput && state.lastCapturedOutput) {
+                        promptValues.output = state.lastCapturedOutput
+                    }
                 }
             } else if (this._code) {
                 runJavascript(this._label, this._code)
@@ -131,9 +144,15 @@ export class Action extends Item {
                     if (!chain.onError && lastCode !== 0) break
 
                     if (chain.type === 'shell' && chain.shell) {
+                        // Replace {{output}} placeholder in chained commands
+                        let chainCommand = chain.shell
+                        if (promptValues.output) {
+                            chainCommand = replacePromptPlaceholders(chainCommand, promptValues)
+                        }
+                        
                         // Merge chain options with env options
                         const chainOptions = mix(chain.options || {}, envOptions)
-                        runCommand(this._label, chain.shell, chainOptions)
+                        runCommand(this._label, chainCommand, chainOptions)
                     } else if (chain.type === 'javascript' && chain.code) {
                         runJavascript(this._label, chain.code)
                     }
@@ -145,12 +164,27 @@ export class Action extends Item {
                 const finalExitCode = state.lastCode ?? 0
                 for (const hook of this._afterHooks) {
                     if (hook.type === 'shell' && hook.shell) {
+                        // Replace {{output}} placeholder in hooks
+                        let hookCommand = hook.shell
+                        if (promptValues.output) {
+                            hookCommand = replacePromptPlaceholders(hookCommand, promptValues)
+                        }
+                        
                         const hookOptions = mix(hook.options || {}, envOptions)
-                        runCommand(this._label, hook.shell, hookOptions)
+                        runCommand(this._label, hookCommand, hookOptions)
                     } else if (hook.type === 'javascript' && hook.code) {
                         runJavascript(this._label, () => hook.code!(finalExitCode))
                     }
                 }
+            }
+
+            // Show notification message if defined
+            if (this._notifyMessage) {
+                const { printer } = state
+                const processedMessage = replacePromptPlaceholders(this._notifyMessage, promptValues)
+                printer.line('', false)
+                printer.line(`✓ ${processedMessage}`, false)
+                printer.line('', false)
             }
 
             // Restore original working directory if it was changed
@@ -533,6 +567,96 @@ export class Action extends Item {
      */
     in(path: string): this {
         this._workingDir = path
+        return this
+    }
+
+    /**
+     * Capture the command's stdout for use in subsequent commands
+     * The captured output is available as {{output}} placeholder in chains, hooks, and notifications
+     *
+     * @example
+     * // Capture output and use in next command
+     * action
+     *   .capture()
+     *   .shell('git rev-parse HEAD')
+     *   .then('echo "Current commit: {{output}}"')
+     *
+     * // Use captured output in notification
+     * action
+     *   .capture()
+     *   .shell('cat version.txt')
+     *   .notify('Version: {{output}}')
+     *
+     * // Capture and use in after hook
+     * action
+     *   .capture()
+     *   .shell('npm list --depth=0')
+     *   .after('echo "{{output}}" | grep express')
+     */
+    capture(): this {
+        this._captureOutput = true
+        return this
+    }
+
+    /**
+     * Hide command output (stderr and stdout)
+     * Useful for commands with verbose output you don't need to see
+     *
+     * @example
+     * // Run command without showing output
+     * action
+     *   .silent()
+     *   .shell('npm install')
+     *
+     * // Use with notification to show only final status
+     * action
+     *   .silent()
+     *   .shell('npm run build')
+     *   .notify('Build completed!')
+     *
+     * // Silent background task
+     * action
+     *   .silent()
+     *   .shell('npm test -- --watch')
+     */
+    silent(): this {
+        this._silentOutput = true
+        return this
+    }
+
+    /**
+     * Show a notification message after command completes
+     * Message can include prompt placeholders including {{output}} from captured commands
+     *
+     * @param message - Notification message to display
+     *
+     * @example
+     * // Simple notification
+     * action
+     *   .shell('npm run build')
+     *   .notify('Build completed successfully!')
+     *
+     * // With prompt placeholders
+     * action
+     *   .prompt('env', 'Environment')
+     *   .shell('deploy --env {{env}}')
+     *   .notify('Deployed to {{env}}!')
+     *
+     * // With captured output
+     * action
+     *   .capture()
+     *   .shell('git rev-parse HEAD')
+     *   .notify('Deployed commit: {{output}}')
+     *
+     * // Multiple placeholders
+     * action
+     *   .prompt('version', 'Version')
+     *   .capture()
+     *   .shell('npm publish --tag {{version}}')
+     *   .notify('Published version {{version}} as {{output}}')
+     */
+    notify(message: string): this {
+        this._notifyMessage = message
         return this
     }
 }

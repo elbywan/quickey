@@ -8,28 +8,57 @@ import { specialCommands } from '../state/special.js'
 
 export interface ShellOptions extends ExecSyncOptions {
     async?: boolean;
+    silent?: boolean;
+    capture?: boolean;
 }
 
-export function runCommand(label: string, command: string, execOptions: ShellOptions = {}): void {
+export function runCommand(label: string, command: string, execOptions: ShellOptions = {}): string | void {
     const { printer, current } = state
     let code: number | undefined = 0
     let signal: string | undefined
+    let capturedOutput = ''
+
+    // Determine stdio mode
+    let stdioMode: 'inherit' | 'ignore' | 'pipe' = 'inherit'
+    if (execOptions.capture) {
+        stdioMode = 'pipe'
+    } else if (execOptions.silent) {
+        stdioMode = 'ignore'
+    }
+
+    // Remove custom options before passing to execSync
+    const { silent, capture, ...nativeExecOptions } = execOptions
 
     printer.line(`> ${command}`, false)
     try {
-        execSync(command, {
-            stdio: 'inherit',
+        const result = execSync(command, {
+            stdio: stdioMode === 'pipe' ? ['inherit', 'pipe', 'pipe'] : stdioMode,
             cwd: current._cwd,
-            ...execOptions
+            encoding: stdioMode === 'pipe' ? 'utf-8' : undefined,
+            ...nativeExecOptions
         })
+        
+        if (capture && result) {
+            capturedOutput = typeof result === 'string' ? result : result.toString()
+            state.lastCapturedOutput = capturedOutput.trim()
+        }
+        
         state.lastCode = 0
         delete state.lastErrorMessage
     } catch (error) {
-        const err = error as { status?: number; signal?: string; message?: string }
+        const err = error as { status?: number; signal?: string; message?: string; stdout?: Buffer; stderr?: Buffer }
         code = err.status
         signal = err.signal
         state.lastCode = err.status
         state.lastErrorMessage = err.message
+        
+        // Capture output even on error
+        if (capture) {
+            if (err.stdout) {
+                capturedOutput = err.stdout.toString('utf-8')
+                state.lastCapturedOutput = capturedOutput.trim()
+            }
+        }
     }
 
     printer.line('', false)
@@ -37,6 +66,10 @@ export function runCommand(label: string, command: string, execOptions: ShellOpt
     
     // Add to history
     addToHistory(label, command, 'shell', code ?? state.lastCode)
+    
+    if (capture) {
+        return capturedOutput.trim()
+    }
 }
 
 export function runCommandAsync(label: string, command: string, execOptions: SpawnOptions = {}): void {

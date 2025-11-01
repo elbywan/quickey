@@ -1325,6 +1325,252 @@ Quickey supports multiple path formats:
 - Remember that hooks also run in the specified directory
 - Directory is restored even if commands fail
 
+## Output Handling
+
+Control how command output is displayed and captured. Use these methods to create cleaner workflows, capture command results, and provide user feedback.
+
+### Capture Output
+
+Capture command output and use it in subsequent commands via the `{{output}}` placeholder:
+
+```javascript
+// Capture and use in next command
+action('Git Info')
+  .capture()
+  .shell('git rev-parse --short HEAD')
+  .then('echo "Current commit: {{output}}"')
+
+// Capture and use in multiple places
+action('Version Bump')
+  .capture()
+  .shell('npm version patch')
+  .then('git tag {{output}}')
+  .then('echo "Created tag {{output}}"')
+
+// Capture for notification
+action('Deploy')
+  .capture()
+  .shell('date +%Y-%m-%d_%H-%M-%S')
+  .notify('Deployment completed at {{output}}')
+  .shell('kubectl apply -f deployment.yaml')
+```
+
+### Silent Output
+
+Hide command output for cleaner workflows (useful for verbose commands):
+
+```javascript
+// Hide verbose npm install output
+action('Setup Project')
+  .silent()
+  .shell('npm install')
+  .then('echo "Dependencies installed!"')
+
+// Combine silent and capture
+action('Get Config')
+  .silent()
+  .capture()
+  .shell('cat config.json | jq -r .version')
+  .notify('Current version: {{output}}')
+
+// Silent setup, visible results
+action('Build')
+  .silent()
+  .shell('npm install')
+  .then('npm run build')  // This output is visible
+```
+
+### Notify with Messages
+
+Display a completion message after the action finishes:
+
+```javascript
+// Simple notification
+action('Deploy')
+  .shell('kubectl apply -f deployment.yaml')
+  .notify('Deployment complete!')
+
+// With prompt placeholders
+action('Build Package')
+  .prompt('name', 'Package name')
+  .in('./packages/{{name}}')
+  .shell('npm run build')
+  .notify('Package {{name}} built successfully!')
+
+// With captured output
+action('Commit')
+  .capture()
+  .shell('git rev-parse HEAD')
+  .shell('git push origin main')
+  .notify('Pushed commit {{output}} to origin')
+
+// Multiple placeholders
+action('Deploy Service')
+  .prompt('env', 'Environment')
+  .capture()
+  .shell('date +%H:%M:%S')
+  .shell('./deploy.sh {{env}}')
+  .notify('Deployed to {{env}} at {{output}}')
+```
+
+### Combined Usage
+
+All output methods can be combined for powerful workflows:
+
+```javascript
+// Capture + Silent + Notify
+action('Deploy with Status')
+  .prompt('env', 'Environment')
+  .silent()
+  .capture()
+  .shell('date +%Y-%m-%d_%H:%M:%S')
+  .notify('Deployment to {{env}} started at {{output}}')
+  .shell('kubectl apply -f deployment-{{env}}.yaml')
+  .then('kubectl rollout status deployment')
+
+// Build pipeline with notifications
+action('Release')
+  .capture()
+  .shell('npm version patch')
+  .silent()
+  .shell('npm run build')
+  .shell('npm run test')
+  .notify('Released version {{output}} successfully!')
+```
+
+### Integration with Features
+
+Output handling works seamlessly with all other features:
+
+```javascript
+// With command chaining
+action('CI Pipeline')
+  .capture()
+  .shell('git rev-parse --short HEAD')
+  .then('docker build -t app:{{output}} .')
+  .then('docker push app:{{output}}')
+  .notify('Built and pushed app:{{output}}')
+
+// With lifecycle hooks
+action('Test')
+  .before(() => console.log('Starting tests...'))
+  .capture()
+  .shell('npm test')
+  .after('echo "Test output: {{output}}"')
+  .notify('Tests completed!')
+
+// With environment variables
+action('Build')
+  .capture()
+  .shell('date +%Y%m%d')
+  .env('BUILD_DATE', '{{output}}')
+  .shell('npm run build')
+  .notify('Build {{output}} complete')
+
+// With working directory
+action('Deploy Service')
+  .prompt('service', 'Service name')
+  .in('./services/{{service}}')
+  .capture()
+  .shell('git rev-parse HEAD')
+  .silent()
+  .shell('docker build -t {{service}}:{{output}} .')
+  .notify('Built {{service}}:{{output}}')
+
+// With confirmation
+action('Production Deploy')
+  .capture()
+  .shell('git rev-parse --short HEAD')
+  .requireConfirmation('Deploy commit {{output}} to production?')
+  .shell('kubectl apply -f prod.yaml')
+  .notify('Deployed {{output}} to production')
+```
+
+### Common Use Cases
+
+**Deployment with Version Tracking:**
+```javascript
+action('Deploy to Production')
+  .capture()
+  .shell('git describe --tags --always')
+  .requireConfirmation('Deploy version {{output}} to production?')
+  .silent()
+  .shell('npm run build')
+  .shell('docker build -t app:{{output}} .')
+  .shell('docker push app:{{output}}')
+  .shell('kubectl set image deployment/app app=app:{{output}}')
+  .notify('Successfully deployed version {{output}}!')
+```
+
+**CI/CD Pipeline:**
+```javascript
+action('CI Pipeline')
+  .capture()
+  .shell('git rev-parse --short HEAD')
+  .notify('Starting CI for commit {{output}}')
+  .silent()
+  .shell('npm install')
+  .shell('npm run build')  // Visible output
+  .shell('npm test')       // Visible output
+  .then('docker build -t app:{{output}} .')
+  .then('docker push app:{{output}}')
+  .notify('Pipeline complete for {{output}}')
+```
+
+**Data Processing:**
+```javascript
+action('Process Data')
+  .prompt('date', 'Process date (YYYY-MM-DD)')
+  .capture()
+  .shell('./extract-data.sh {{date}}')
+  .silent()
+  .shell('./transform.sh')
+  .shell('./validate.sh {{output}}')  // Validates extracted data
+  .notify('Processed {{output}} records for {{date}}')
+```
+
+**Build with Timestamp:**
+```javascript
+action('Timestamped Build')
+  .capture()
+  .shell('date +%Y%m%d-%H%M%S')
+  .env('BUILD_ID', '{{output}}')
+  .silent()
+  .shell('npm run build')
+  .shell('tar -czf build-{{output}}.tar.gz dist/')
+  .notify('Created build-{{output}}.tar.gz')
+```
+
+### How It Works
+
+**Capture:**
+- Sets `capture` flag on the action
+- Command runs with `stdio: 'pipe'` to capture stdout
+- Output is stored in `state.lastCapturedOutput`
+- Added to `promptValues` as `{{output}}` placeholder
+- Available in all subsequent commands, hooks, and notifications
+
+**Silent:**
+- Sets `silent` flag on the action
+- Command runs with `stdio: 'ignore'` to suppress output
+- Useful for verbose commands (npm install, long downloads, etc.)
+- Can be combined with `capture()` to hide output but still use it
+
+**Notify:**
+- Stores a message to display when the action completes
+- Message supports all placeholders: prompts (`{{name}}`) and output (`{{output}}`)
+- Displayed after all commands and hooks finish
+- Great for providing feedback without cluttering command output
+
+### Tips
+
+- Use `capture()` when you need command results in later commands
+- Use `silent()` to hide verbose setup commands while showing important output
+- Use `notify()` to provide clear feedback about what happened
+- Combine all three for professional, clean workflows
+- The `{{output}}` placeholder is replaced in commands, hooks, env vars, and notifications
+- Captured output is available throughout the entire action lifecycle
+
 ## Usage
 
 ```bash

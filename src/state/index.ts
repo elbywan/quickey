@@ -32,6 +32,7 @@ export const state: {
     printer: Printer;
     lastCode?: number;
     lastErrorMessage?: string;
+    lastCapturedOutput?: string;
     asyncRunning: Map<ChildProcess, { label: string; command: string }>;
     asyncBuffer: CircularStringBuffer;
     searchMode: boolean;
@@ -44,6 +45,7 @@ export const state: {
     set printer(value: Printer) { _printer = value },
     lastCode: 0,
     lastErrorMessage: '',
+    lastCapturedOutput: '',
     asyncRunning: new Map(),
     asyncBuffer: new CircularStringBuffer(100),
     searchMode: false,
