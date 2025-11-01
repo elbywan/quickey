@@ -526,6 +526,176 @@ export default function(q) {
 - Conditions don't affect execution - they only control visibility
 - Use conditions with prompts, confirmations, and chaining for powerful workflows
 
+## Environment Variables
+
+Set custom environment variables for your shell commands. Environment variables are merged with `process.env` and passed to all shell commands, including chained commands.
+
+### Basic Usage
+
+```javascript
+// Set a single environment variable
+action('deploy')
+  .env('NODE_ENV', 'production')
+  .shell('npm run build')
+
+// Set multiple environment variables
+action('test')
+  .env({
+    NODE_ENV: 'test',
+    DEBUG: 'true',
+    LOG_LEVEL: 'verbose'
+  })
+  .shell('npm test')
+
+// Chain multiple env() calls
+action('build')
+  .env('NODE_ENV', 'production')
+  .env('OPTIMIZE', 'true')
+  .env('SOURCE_MAP', 'false')
+  .shell('npm run build')
+```
+
+### Dynamic Values from Prompts
+
+Environment variables can use prompt placeholders that are replaced with user input:
+
+```javascript
+// Single dynamic value
+action('deploy')
+  .prompt('environment', 'Target environment')
+  .env('DEPLOY_ENV', '{{environment}}')
+  .shell('deploy.sh')  // deploy.sh can access $DEPLOY_ENV
+
+// Multiple dynamic values
+action('provision')
+  .prompt('region', 'AWS Region')
+  .prompt('size', 'Instance size')
+  .env({
+    AWS_REGION: '{{region}}',
+    INSTANCE_SIZE: '{{size}}',
+    APP_NAME: 'my-app'  // Static value
+  })
+  .shell('terraform apply')
+
+// With select prompts
+action('deploy')
+  .select('env', 'Environment', ['dev', 'staging', 'prod'])
+  .select('region', 'Region', ['us-east', 'us-west', 'eu-central'])
+  .env({
+    DEPLOY_ENV: '{{env}}',
+    DEPLOY_REGION: '{{region}}'
+  })
+  .shell('deploy.sh')
+
+// Complex placeholder patterns
+action('connect-db')
+  .prompt('host', 'Database host')
+  .prompt('port', 'Database port')
+  .prompt('dbname', 'Database name')
+  .password('password', 'Database password')
+  .env('DATABASE_URL', 'postgres://user:{{password}}@{{host}}:{{port}}/{{dbname}}')
+  .shell('psql $DATABASE_URL')
+```
+
+### With Command Chaining
+
+Environment variables are automatically passed to all chained commands:
+
+```javascript
+// Env vars available in all chains
+action('ci-pipeline')
+  .env({
+    NODE_ENV: 'test',
+    CI: 'true',
+    COVERAGE_REPORT: './coverage'
+  })
+  .shell('npm run build')
+  .then('npm test')
+  .then('npm run coverage')
+  .onError('npm run cleanup')
+  // All commands above have access to NODE_ENV, CI, and COVERAGE_REPORT
+
+// Combine with prompts and chaining
+action('deploy-pipeline')
+  .select('env', 'Environment', ['staging', 'production'])
+  .prompt('version', 'Version tag')
+  .env({
+    DEPLOY_ENV: '{{env}}',
+    DEPLOY_VERSION: '{{version}}',
+    BUILD_ID: Date.now().toString()
+  })
+  .requireConfirmation('Deploy v{{version}} to {{env}}?')
+  .shell('npm run build')
+  .then('npm run test')
+  .then('deploy.sh')
+  .onError('rollback.sh')
+```
+
+### Common Use Cases
+
+```javascript
+// API deployments with credentials
+action('api-deploy')
+  .password('apiKey', 'API Key')
+  .env({
+    API_KEY: '{{apiKey}}',
+    API_URL: 'https://api.production.com',
+    TIMEOUT: '30000'
+  })
+  .shell('npm run deploy')
+
+// Build with environment-specific configuration
+action('build')
+  .select('target', 'Build target', ['development', 'production'])
+  .env({
+    NODE_ENV: '{{target}}',
+    OPTIMIZE: '{{target}}' === 'production' ? 'true' : 'false',
+    SOURCE_MAP: '{{target}}' === 'development' ? 'inline' : 'hidden'
+  })
+  .shell('webpack build')
+
+// Override system environment variables
+action('custom-path')
+  .env('PATH', '/usr/local/custom/bin:' + process.env.PATH)
+  .shell('my-custom-command')
+
+// Database operations
+action('migrate')
+  .select('env', 'Environment', ['dev', 'staging', 'prod'])
+  .password('dbPassword', 'Database password')
+  .env({
+    DB_HOST: 'db.{{env}}.example.com',
+    DB_USER: 'admin',
+    DB_PASS: '{{dbPassword}}',
+    DB_NAME: 'app_{{env}}'
+  })
+  .requireConfirmation('Run migrations on {{env}}?')
+  .shell('npm run migrate')
+
+// CI/CD pipelines
+action('release')
+  .prompt('version', 'Release version')
+  .confirm('createTag', 'Create git tag?', true)
+  .env({
+    RELEASE_VERSION: '{{version}}',
+    CREATE_TAG: '{{createTag}}',
+    BUILD_NUMBER: process.env.CI_BUILD_NUMBER || 'local',
+    COMMIT_SHA: process.env.GIT_COMMIT || 'unknown'
+  })
+  .shell('npm run build')
+  .then('npm run package')
+  .then('[ "$CREATE_TAG" = "true" ] && git tag v$RELEASE_VERSION')
+  .then('npm publish')
+```
+
+### How Environment Variables Work
+- Custom env vars are merged with `process.env` before command execution
+- Custom values override existing environment variables
+- Prompt placeholders (`{{name}}`) are replaced before execution
+- Env vars are passed to all shell commands (primary and chained)
+- Env vars are only available to shell commands, not JavaScript actions
+- The original `process.env` remains unchanged
+
 ## Usage
 
 ```bash

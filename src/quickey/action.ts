@@ -26,20 +26,35 @@ export class Action extends Item {
     _confirmMessage?: string
     _confirmDefault: boolean = false
     _chains: ChainLink[] = []
+    _envVars: Record<string, string> = {}
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
             let command = this._shell
 
             // Handle prompts if defined
+            let promptValues: Record<string, string> = {}
             if (this._prompts.length > 0 && command) {
                 const { printer } = state
                 printer.line('', false)
 
-                const values = await promptUserMultiple(this._prompts)
-                command = replacePromptPlaceholders(command, values)
+                promptValues = await promptUserMultiple(this._prompts)
+                command = replacePromptPlaceholders(command, promptValues)
 
                 printer.line('', false)
+            }
+
+            // Process environment variables
+            const envOptions: ShellOptions = {}
+            if (Object.keys(this._envVars).length > 0) {
+                // Replace placeholders in env var values with prompt values
+                const processedEnv: Record<string, string> = {}
+                for (const [key, value] of Object.entries(this._envVars)) {
+                    processedEnv[key] = replacePromptPlaceholders(value, promptValues)
+                }
+                
+                // Merge with current process.env
+                envOptions.env = { ...process.env, ...processedEnv }
             }
 
             // Handle confirmation if defined
@@ -58,14 +73,17 @@ export class Action extends Item {
                 }
             }
 
+            // Merge shell options with env options
+            const finalOptions = mix(this._shellOptions, envOptions)
+
             // Execute primary command
             if (command) {
                 if (this._shellOptions.async) {
-                    runCommandAsync(this._label, command, this._shellOptions)
+                    runCommandAsync(this._label, command, finalOptions)
                     // Async commands don't support chaining
                     return
                 } else {
-                    runCommand(this._label, command, this._shellOptions)
+                    runCommand(this._label, command, finalOptions)
                 }
             } else if (this._code) {
                 runJavascript(this._label, this._code)
@@ -81,7 +99,9 @@ export class Action extends Item {
                     if (!chain.onError && lastCode !== 0) break
 
                     if (chain.type === 'shell' && chain.shell) {
-                        runCommand(this._label, chain.shell, chain.options)
+                        // Merge chain options with env options
+                        const chainOptions = mix(chain.options || {}, envOptions)
+                        runCommand(this._label, chain.shell, chainOptions)
                     } else if (chain.type === 'javascript' && chain.code) {
                         runJavascript(this._label, chain.code)
                     }
@@ -284,6 +304,56 @@ export class Action extends Item {
             this._chains.push({ type: 'shell', shell: commandOrCode, options, onError: true })
         } else {
             this._chains.push({ type: 'javascript', code: commandOrCode, onError: true })
+        }
+        return this
+    }
+
+    /**
+     * Set environment variables for command execution
+     *
+     * @param keyOrVars - Environment variable key or object of key-value pairs
+     * @param value - Environment variable value (if key is string)
+     *
+     * @example
+     * // Set single static env var
+     * action
+     *   .env('NODE_ENV', 'production')
+     *   .shell('npm start')
+     *
+     * // Set multiple env vars with object
+     * action
+     *   .env({
+     *     NODE_ENV: 'production',
+     *     PORT: '3000',
+     *     API_KEY: 'secret'
+     *   })
+     *   .shell('npm start')
+     *
+     * // Use dynamic values from prompts
+     * action
+     *   .prompt('apiKey', 'Enter API key')
+     *   .env('API_KEY', '{{apiKey}}')
+     *   .shell('npm run deploy')
+     *
+     * // Mix static and dynamic env vars
+     * action
+     *   .select('env', 'Environment', ['dev', 'staging', 'prod'])
+     *   .prompt('version', 'Version')
+     *   .env({
+     *     DEPLOY_ENV: '{{env}}',
+     *     DEPLOY_VERSION: '{{version}}',
+     *     DEPLOY_USER: 'ci-bot'
+     *   })
+     *   .shell('deploy.sh')
+     */
+    env(keyOrVars: string | Record<string, string>, value?: string): this {
+        if (typeof keyOrVars === 'string') {
+            if (value === undefined) {
+                throw new Error('env() requires a value when called with a string key')
+            }
+            this._envVars[keyOrVars] = value
+        } else {
+            this._envVars = { ...this._envVars, ...keyOrVars }
         }
         return this
     }

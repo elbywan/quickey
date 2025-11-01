@@ -70,6 +70,25 @@ export default quickey => {
         .shell('npm run dev')
         .condition(() => process.env.NODE_ENV === 'development')
 
+    // Action with environment variables
+    quickey
+        .action('API Deploy')
+        .description('Deploy with API credentials.')
+        .prompt('apiKey', 'API Key')
+        .select('region', 'Select region', ['us-east-1', 'us-west-2', 'eu-west-1'])
+        .env('API_KEY', '{{apiKey}}')
+        .env('AWS_REGION', '{{region}}')
+        .env('DEPLOY_TIME', new Date().toISOString())
+        .shell('echo "Deploying to $AWS_REGION with key: ${API_KEY:0:8}... at $DEPLOY_TIME"')
+
+    // Action with multiple environment variables
+    quickey
+        .action('Build Release')
+        .description('Build with environment configuration.')
+        .env({ NODE_ENV: 'production', BUILD_TARGET: 'release', OPTIMIZE: 'true' })
+        .shell('npm run build')
+        .then('echo "Built with NODE_ENV=$NODE_ENV, target=$BUILD_TARGET"')
+
     // A simple category containing lists commands
     quickey
         .category('Lists')
