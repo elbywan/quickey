@@ -234,3 +234,134 @@ export async function runParallel(label: string, tasks: ParallelTask[], baseOpti
     // Add to history
     addToHistory(label, `${tasks.length} parallel tasks`, 'shell', finalCode)
 }
+
+export interface WatchOptions {
+    interval?: number
+    files?: string[]
+}
+
+export async function runWatch(
+    label: string,
+    action: any,
+    watchOptions: WatchOptions,
+    shellOptions: ShellOptions,
+    promptValues: Record<string, string>
+): Promise<void> {
+    const { printer } = state
+    const { watch: fsWatch } = await import('fs')
+    const { replacePromptPlaceholders } = await import('./index.js')
+    
+    if (watchOptions.interval !== undefined) {
+        // Interval-based watch (polling)
+        printer.line(`> ${label} (watching every ${watchOptions.interval}ms, press Ctrl+C to stop)`, false)
+        printer.line('', false)
+        
+        let iteration = 0
+        const runIteration = async () => {
+            iteration++
+            printer.line(chalk.bold(`\n--- Watch iteration ${iteration} at ${new Date().toLocaleTimeString()} ---`), false)
+            
+            // Execute the action's command or code
+            if (action._shell) {
+                let command = action._shell
+                if (promptValues && Object.keys(promptValues).length > 0) {
+                    command = replacePromptPlaceholders(command, promptValues)
+                }
+                runCommand(label, command, shellOptions)
+            } else if (action._code) {
+                runJavascript(label, action._code)
+            }
+        }
+        
+        // Run immediately first
+        await runIteration()
+        
+        // Then set up interval
+        const intervalId = setInterval(runIteration, watchOptions.interval)
+        
+        // Handle Ctrl+C gracefully
+        const cleanup = () => {
+            clearInterval(intervalId)
+            printer.line('', false)
+            printer.line(chalk.yellow('Watch mode stopped'), false)
+            printer.line('', false)
+            process.exit(0)
+        }
+        
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+        
+        // Keep the process running
+        await new Promise(() => {})
+        
+    } else if (watchOptions.files && watchOptions.files.length > 0) {
+        // File-based watch
+        printer.line(`> ${label} (watching: ${watchOptions.files.join(', ')}, press Ctrl+C to stop)`, false)
+        printer.line('', false)
+        
+        // Debounce mechanism to avoid multiple triggers
+        let debounceTimeout: NodeJS.Timeout | null = null
+        const debounceDelay = 100
+        
+        const runAction = async () => {
+            printer.line(chalk.bold(`\n--- File changed at ${new Date().toLocaleTimeString()} ---`), false)
+            
+            // Execute the action's command or code
+            if (action._shell) {
+                let command = action._shell
+                if (promptValues && Object.keys(promptValues).length > 0) {
+                    command = replacePromptPlaceholders(command, promptValues)
+                }
+                runCommand(label, command, shellOptions)
+            } else if (action._code) {
+                runJavascript(label, action._code)
+            }
+        }
+        
+        // Watch each file/directory pattern
+        const watchers: any[] = []
+        
+        for (const pattern of watchOptions.files) {
+            try {
+                const watcher = fsWatch(pattern, { recursive: true }, (eventType, filename) => {
+                    if (debounceTimeout) {
+                        clearTimeout(debounceTimeout)
+                    }
+                    debounceTimeout = setTimeout(() => {
+                        runAction()
+                        debounceTimeout = null
+                    }, debounceDelay)
+                })
+                watchers.push(watcher)
+            } catch (error) {
+                printer.line(chalk.yellow(`Warning: Could not watch ${pattern}`), false)
+            }
+        }
+        
+        if (watchers.length === 0) {
+            printer.line(chalk.red('Error: Could not set up any file watchers'), false)
+            return
+        }
+        
+        printer.line(chalk.gray(`Watching ${watchers.length} path(s)`), false)
+        printer.line('', false)
+        
+        // Handle Ctrl+C gracefully
+        const cleanup = () => {
+            watchers.forEach(w => w.close())
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout)
+            }
+            printer.line('', false)
+            printer.line(chalk.yellow('Watch mode stopped'), false)
+            printer.line('', false)
+            process.exit(0)
+        }
+        
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+        
+        // Keep the process running
+        await new Promise(() => {})
+    }
+}

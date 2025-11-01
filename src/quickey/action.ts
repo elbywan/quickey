@@ -26,6 +26,11 @@ export interface ParallelTask {
     options?: ShellOptions
 }
 
+export interface WatchOptions {
+    interval?: number  // Polling interval in milliseconds
+    files?: string[]   // File patterns to watch
+}
+
 export interface Hook {
     type: 'shell' | 'javascript'
     shell?: string
@@ -49,6 +54,7 @@ export class Action extends Item {
     _notifyMessage?: string
     _isFavorite: boolean = false
     _parallelTasks: ParallelTask[] = []
+    _watchOptions?: WatchOptions
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -112,6 +118,18 @@ export class Action extends Item {
             }
             if (this._silentOutput) {
                 finalOptions.silent = true
+            }
+
+            // Handle watch mode if defined
+            if (this._watchOptions) {
+                const { runWatch } = await import('../tools/index.js')
+                await runWatch(this._label, this, this._watchOptions, finalOptions, promptValues)
+                
+                // Restore original working directory if it was changed
+                if (originalCwd !== undefined) {
+                    state.current._cwd = originalCwd
+                }
+                return
             }
 
             // Execute before hooks
@@ -872,6 +890,16 @@ export class Action extends Item {
                 return { type: 'javascript' as const, code: task }
             }
         })
+        return this
+    }
+
+    watch(interval: number = 1000): this {
+        this._watchOptions = { interval }
+        return this
+    }
+
+    watchFiles(patterns: string[]): this {
+        this._watchOptions = { files: patterns }
         return this
     }
 }

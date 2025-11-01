@@ -1583,6 +1583,278 @@ Parallel execution results:
 - Use `.before()` hooks to ensure dependencies are installed before parallel execution
 - Add `.requireConfirmation()` for destructive parallel operations
 
+## Watch Mode
+
+Automatically re-run commands at regular intervals or when files change. Watch mode is perfect for continuous testing, monitoring, and file-watching workflows.
+
+### Interval-Based Watching
+
+Run a command repeatedly at fixed intervals (in milliseconds):
+
+```javascript
+export default function(q) {
+  // Run every 2 seconds
+  q.action('Monitor Logs')
+    .watch(2000)
+    .shell('tail -n 20 app.log')
+  
+  // Check server health every 5 seconds
+  q.action('Health Check')
+    .watch(5000)
+    .shell('curl -s http://localhost:3000/health | jq .')
+  
+  // Run tests every 1 second
+  q.action('Test Watch')
+    .watch(1000)
+    .shell('npm test')
+}
+```
+
+### File-Based Watching
+
+Re-run commands when files or directories change:
+
+```javascript
+export default function(q) {
+  // Watch a single file
+  q.action('Watch Config')
+    .watchFiles(['config.json'])
+    .shell('echo "Config changed!" && cat config.json')
+  
+  // Watch multiple files
+  q.action('Watch Sources')
+    .watchFiles(['src/index.ts', 'src/app.ts'])
+    .shell('npm run build')
+  
+  // Watch directories recursively
+  q.action('Watch All Sources')
+    .watchFiles(['src/', 'lib/'])
+    .shell('npm run build && npm test')
+  
+  // Watch patterns (glob-like)
+  q.action('Watch TypeScript')
+    .watchFiles(['**/*.ts', '**/*.tsx'])
+    .shell('npm run type-check')
+}
+```
+
+### With Prompts
+
+Use dynamic values from prompts in watch commands:
+
+```javascript
+export default function(q) {
+  q.action('Watch Custom Path')
+    .prompt('path', 'Directory to watch')
+    .watchFiles(['{{path}}/**/*'])
+    .shell('echo "Changes detected in {{path}}"')
+  
+  q.action('Monitor Service')
+    .select('service', 'Service', ['api', 'web', 'worker'])
+    .watch(3000)
+    .shell('systemctl status {{service}}')
+}
+```
+
+### With Environment Variables
+
+Set environment variables for watched commands:
+
+```javascript
+export default function(q) {
+  q.action('Watch Tests')
+    .env('NODE_ENV', 'test')
+    .env('WATCH_MODE', 'true')
+    .watchFiles(['src/**/*.test.ts'])
+    .shell('npm test')
+  
+  q.action('Monitor with Config')
+    .prompt('env', 'Environment')
+    .env('ENV', '{{env}}')
+    .watch(5000)
+    .shell('./check-health.sh $ENV')
+}
+```
+
+### With Working Directory
+
+Watch mode respects the working directory setting:
+
+```javascript
+export default function(q) {
+  q.action('Watch Package Build')
+    .prompt('pkg', 'Package name')
+    .in('./packages/{{pkg}}')
+    .watchFiles(['src/**/*.ts'])
+    .shell('npm run build')
+  
+  q.action('Monitor Logs')
+    .in('/var/log/myapp')
+    .watch(2000)
+    .shell('tail -n 50 app.log')
+}
+```
+
+### With Output Control
+
+Control how output is displayed during watch mode:
+
+```javascript
+export default function(q) {
+  // Silent watch - only show errors
+  q.action('Silent Watch')
+    .silent()
+    .watchFiles(['src/**/*.ts'])
+    .shell('npm run build')
+  
+  // Capture and notify
+  q.action('Watch Version')
+    .capture()
+    .watch(10000)
+    .shell('git describe --tags')
+    .notify('Current version: {{output}}')
+}
+```
+
+### Use Cases
+
+**Continuous Testing:**
+```javascript
+// Re-run tests when source files change
+q.action('Test Watch')
+  .env('NODE_ENV', 'test')
+  .watchFiles(['src/**/*.ts', 'test/**/*.test.ts'])
+  .shell('npm test')
+
+// Watch specific test file
+q.action('Test Single File')
+  .prompt('file', 'Test file path')
+  .watchFiles(['{{file}}'])
+  .shell('npm test {{file}}')
+```
+
+**Build on Change:**
+```javascript
+// Rebuild when source changes
+q.action('Auto Build')
+  .watchFiles(['src/**/*.ts', 'src/**/*.tsx'])
+  .shell('npm run build')
+  .notify('Build complete!')
+
+// Build multiple packages
+q.action('Build All')
+  .watchFiles(['packages/*/src/**/*.ts'])
+  .shell('npm run build --workspaces')
+```
+
+**Log Monitoring:**
+```javascript
+// Monitor application logs
+q.action('Watch Logs')
+  .watch(1000)
+  .shell('tail -n 30 /var/log/app.log | grep ERROR')
+
+// Monitor with timestamp
+q.action('Monitor System')
+  .watch(5000)
+  .shell('echo "=== $(date) ===" && df -h && free -h')
+```
+
+**Development Server Monitoring:**
+```javascript
+// Check if server is running
+q.action('Health Check')
+  .watch(3000)
+  .silent()
+  .shell('curl -f http://localhost:3000/health || echo "Server down!"')
+
+// Monitor API response time
+q.action('Response Time')
+  .watch(2000)
+  .shell('time curl -s http://localhost:3000/api/status > /dev/null')
+```
+
+**File Processing:**
+```javascript
+// Process new images
+q.action('Optimize Images')
+  .watchFiles(['uploads/**/*.{jpg,png}'])
+  .shell('npm run optimize-images')
+
+// Compile Sass on change
+q.action('Watch Styles')
+  .watchFiles(['styles/**/*.scss'])
+  .shell('sass styles/main.scss:dist/main.css')
+```
+
+**Configuration Monitoring:**
+```javascript
+// Reload config when changed
+q.action('Reload Config')
+  .watchFiles(['config.json', '.env'])
+  .shell('kill -HUP $(cat app.pid)')
+
+// Validate config changes
+q.action('Validate Config')
+  .watchFiles(['config/**/*.yaml'])
+  .shell('npm run validate-config')
+```
+
+### How Watch Mode Works
+
+**Interval-Based (`watch()`):**
+- Runs the command immediately
+- Waits for the specified interval (in milliseconds)
+- Runs the command again
+- Repeats until you press Ctrl+C
+
+**File-Based (`watchFiles()`):**
+- Runs the command immediately
+- Watches specified files/directories for changes
+- When changes detected, waits 100ms (debounce)
+- Runs the command again
+- Uses native Node.js `fs.watch()` with recursive watching
+
+**Execution Behavior:**
+- Watch mode bypasses command chains (`.then()`, `.onError()`)
+- Lifecycle hooks (`.before()`, `.after()`) are not executed
+- Parallel execution is not supported with watch mode
+- Each execution is independent
+- Press Ctrl+C to stop watching
+
+**File Watching:**
+- Supports single files: `['config.json']`
+- Supports multiple files: `['file1.js', 'file2.js']`
+- Supports directories: `['src/']` (recursive)
+- Supports multiple paths: `['src/', 'lib/', 'config.json']`
+- Uses native recursive watching (efficient)
+- 100ms debounce prevents rapid re-triggers
+
+### Tips
+
+- Use `watch()` for time-based monitoring (logs, health checks, metrics)
+- Use `watchFiles()` for development workflows (builds, tests, linting)
+- Combine with `.silent()` to reduce output noise
+- Use `.capture()` and `.notify()` for cleaner feedback
+- Watch mode shows the full command output by default
+- Press Ctrl+C to gracefully stop watching
+- For file watching, specify specific files/directories for better performance
+- Avoid very short intervals (< 500ms) to prevent system overload
+- Remember: chains and hooks don't work in watch mode
+
+### Limitations
+
+- **No Chaining**: Cannot use `.then()` or `.onError()` in watch mode
+- **No Hooks**: `.before()` and `.after()` hooks are not executed
+- **No Parallel**: Cannot combine with `.parallel()`
+- **No History**: Watch executions are not added to command history
+- **Single Command**: Only the main command is executed repeatedly
+- **Interactive Prompts**: Prompts are asked once before watching starts, not on each execution
+
+### Stopping Watch Mode
+
+Press `Ctrl+C` to stop watching and return to the menu. The watch process will clean up automatically and display an exit message.
+
 ## Command History
 
 Quickey automatically tracks all executed commands and allows you to quickly re-run them from a history menu.

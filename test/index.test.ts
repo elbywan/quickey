@@ -3,6 +3,7 @@ import './config.test.js'
 import './prompt.test.js'
 import './utils.test.js'
 import './state.test.js'
+import './watch.test.js'
 
 // Export to ensure this file is executed
 export {}
