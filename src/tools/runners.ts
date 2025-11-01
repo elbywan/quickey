@@ -11,6 +11,7 @@ export interface ShellOptions extends ExecSyncOptions {
     async?: boolean;
     silent?: boolean;
     capture?: boolean;
+    timeout?: number;
 }
 
 export function runCommand(label: string, command: string, execOptions: ShellOptions = {}): string | void {
@@ -38,12 +39,12 @@ export function runCommand(label: string, command: string, execOptions: ShellOpt
             encoding: stdioMode === 'pipe' ? 'utf-8' : undefined,
             ...nativeExecOptions
         })
-        
+
         if (capture && result) {
             capturedOutput = typeof result === 'string' ? result : result.toString()
             state.lastCapturedOutput = capturedOutput.trim()
         }
-        
+
         state.lastCode = 0
         delete state.lastErrorMessage
     } catch (error) {
@@ -51,8 +52,14 @@ export function runCommand(label: string, command: string, execOptions: ShellOpt
         code = err.status
         signal = err.signal
         state.lastCode = err.status
-        state.lastErrorMessage = err.message
-        
+
+        // Check if this was a timeout
+        if (signal === 'SIGTERM' && execOptions.timeout) {
+            state.lastErrorMessage = `Command timed out after ${execOptions.timeout}ms`
+        } else {
+            state.lastErrorMessage = err.message
+        }
+
         // Capture output even on error
         if (capture) {
             if (err.stdout) {
@@ -64,26 +71,37 @@ export function runCommand(label: string, command: string, execOptions: ShellOpt
 
     printer.line('', false)
     printCommandResult(label, code, signal)
-    
+
     // Add to history
     addToHistory(label, command, 'shell', code ?? state.lastCode)
-    
+
     if (capture) {
         return capturedOutput.trim()
     }
 }
 
-export function runCommandAsync(label: string, command: string, execOptions: SpawnOptions = {}): void {
+export function runCommandAsync(label: string, command: string, execOptions: ShellOptions = {}): void {
     const { printer, current } = state
 
     printer.line(`&> ${command}`, false)
 
+    const { silent, capture, timeout, async, ...spawnOptions } = execOptions
     const subprocess = spawn(command, [], {
         cwd: current._cwd,
         shell: true,
         detached: true,
-        ...execOptions
+        ...spawnOptions
     })
+
+    // Set up timeout if specified
+    let timeoutId: NodeJS.Timeout | undefined
+    if (timeout) {
+        timeoutId = setTimeout(() => {
+            subprocess.kill('SIGTERM')
+            state.lastErrorMessage = `Command timed out after ${timeout}ms`
+        }, timeout)
+    }
+
     const buffer = new CircularStringBuffer(10)
     subprocess.stdout?.on('data', data => {
         state.asyncBuffer.push(data.toString(), chalk.bold('[' + label + ']') + ' >> ')
@@ -94,12 +112,14 @@ export function runCommandAsync(label: string, command: string, execOptions: Spa
         buffer.push(data.toString())
     })
     subprocess.on('error', error => {
+        if (timeoutId) clearTimeout(timeoutId)
         printer.line(
             chalk.bgBlack.bold.red('<!> Unable to launch shell process!\n' + error.toString()),
             false
         )
     })
     subprocess.on('close', async function (code, signal) {
+        if (timeoutId) clearTimeout(timeoutId)
         removeAsync(subprocess)
 
         if (state.current._id === 'background-processes') {
@@ -146,7 +166,7 @@ export function runJavascript(label: string, code: () => any): void {
             '[' + style(message) + '] ', false)
     }
     printer.line('', false)
-    
+
     // Add to history
     addToHistory(label, label, 'javascript', exitCode)
 }
@@ -166,23 +186,38 @@ export async function runParallel(label: string, tasks: ParallelTask[], baseOpti
 
     const taskPromises = tasks.map(async (task, index) => {
         const taskLabel = `${label}[${index}]`
-        
+
         if (task.type === 'shell' && task.shell) {
             return new Promise<{ label: string; code: number | undefined; signal: string | undefined }>((resolve) => {
                 const taskOptions = mix(baseOptions, task.options || {})
-                
+
+                const { silent, capture, timeout, async, ...spawnOptions } = taskOptions
                 const subprocess = spawn(task.shell!, [], {
                     cwd: current._cwd,
                     shell: true,
-                    stdio: taskOptions.silent ? 'ignore' : 'inherit',
-                    ...taskOptions
+                    stdio: silent ? 'ignore' : 'inherit',
+                    ...spawnOptions
                 })
 
+                // Set up timeout if specified
+                let timeoutId: NodeJS.Timeout | undefined
+                if (timeout) {
+                    timeoutId = setTimeout(() => {
+                        subprocess.kill('SIGTERM')
+                        printer.line(
+                            chalk.bgBlack.bold.red(`<!> Task ${index} timed out after ${timeout}ms`),
+                            false
+                        )
+                    }, timeout)
+                }
+
                 subprocess.on('close', (code, signal) => {
+                    if (timeoutId) clearTimeout(timeoutId)
                     resolve({ label: taskLabel, code: code ?? undefined, signal: signal ?? undefined })
                 })
 
                 subprocess.on('error', (error) => {
+                    if (timeoutId) clearTimeout(timeoutId)
                     printer.line(
                         chalk.bgBlack.bold.red(`<!> Task ${index} failed: ${error.toString()}`),
                         false
@@ -205,18 +240,18 @@ export async function runParallel(label: string, tasks: ParallelTask[], baseOpti
                 }
             })
         }
-        
+
         return Promise.resolve({ label: taskLabel, code: 0, signal: undefined })
     })
 
     const results = await Promise.all(taskPromises)
-    
+
     printer.line('', false)
     printer.line(chalk.bold('Parallel execution results:'), false)
-    
+
     let allSucceeded = true
     results.forEach((result, index) => {
-        const status = result.code === 0 
+        const status = result.code === 0
             ? chalk.green('✓ Success')
             : chalk.red(`✗ Failed (code: ${result.code})`)
         printer.line(`  Task ${index}: ${status}`, false)
@@ -224,13 +259,13 @@ export async function runParallel(label: string, tasks: ParallelTask[], baseOpti
             allSucceeded = false
         }
     })
-    
+
     printer.line('', false)
-    
+
     const finalCode = allSucceeded ? 0 : 1
     state.lastCode = finalCode
     printCommandResult(label, finalCode)
-    
+
     // Add to history
     addToHistory(label, `${tasks.length} parallel tasks`, 'shell', finalCode)
 }
@@ -250,17 +285,17 @@ export async function runWatch(
     const { printer } = state
     const { watch: fsWatch } = await import('fs')
     const { replacePromptPlaceholders } = await import('./index.js')
-    
+
     if (watchOptions.interval !== undefined) {
         // Interval-based watch (polling)
         printer.line(`> ${label} (watching every ${watchOptions.interval}ms, press Ctrl+C to stop)`, false)
         printer.line('', false)
-        
+
         let iteration = 0
         const runIteration = async () => {
             iteration++
             printer.line(chalk.bold(`\n--- Watch iteration ${iteration} at ${new Date().toLocaleTimeString()} ---`), false)
-            
+
             // Execute the action's command or code
             if (action._shell) {
                 let command = action._shell
@@ -272,13 +307,13 @@ export async function runWatch(
                 runJavascript(label, action._code)
             }
         }
-        
+
         // Run immediately first
         await runIteration()
-        
+
         // Then set up interval
         const intervalId = setInterval(runIteration, watchOptions.interval)
-        
+
         // Handle Ctrl+C gracefully
         const cleanup = () => {
             clearInterval(intervalId)
@@ -287,25 +322,25 @@ export async function runWatch(
             printer.line('', false)
             process.exit(0)
         }
-        
+
         process.on('SIGINT', cleanup)
         process.on('SIGTERM', cleanup)
-        
+
         // Keep the process running
         await new Promise(() => {})
-        
+
     } else if (watchOptions.files && watchOptions.files.length > 0) {
         // File-based watch
         printer.line(`> ${label} (watching: ${watchOptions.files.join(', ')}, press Ctrl+C to stop)`, false)
         printer.line('', false)
-        
+
         // Debounce mechanism to avoid multiple triggers
         let debounceTimeout: NodeJS.Timeout | null = null
         const debounceDelay = 100
-        
+
         const runAction = async () => {
             printer.line(chalk.bold(`\n--- File changed at ${new Date().toLocaleTimeString()} ---`), false)
-            
+
             // Execute the action's command or code
             if (action._shell) {
                 let command = action._shell
@@ -317,10 +352,10 @@ export async function runWatch(
                 runJavascript(label, action._code)
             }
         }
-        
+
         // Watch each file/directory pattern
         const watchers: any[] = []
-        
+
         for (const pattern of watchOptions.files) {
             try {
                 const watcher = fsWatch(pattern, { recursive: true }, (eventType, filename) => {
@@ -337,15 +372,15 @@ export async function runWatch(
                 printer.line(chalk.yellow(`Warning: Could not watch ${pattern}`), false)
             }
         }
-        
+
         if (watchers.length === 0) {
             printer.line(chalk.red('Error: Could not set up any file watchers'), false)
             return
         }
-        
+
         printer.line(chalk.gray(`Watching ${watchers.length} path(s)`), false)
         printer.line('', false)
-        
+
         // Handle Ctrl+C gracefully
         const cleanup = () => {
             watchers.forEach(w => w.close())
@@ -357,10 +392,10 @@ export async function runWatch(
             printer.line('', false)
             process.exit(0)
         }
-        
+
         process.on('SIGINT', cleanup)
         process.on('SIGTERM', cleanup)
-        
+
         // Keep the process running
         await new Promise(() => {})
     }

@@ -118,7 +118,7 @@ export default function(q) {
     groupByPrefix: true,        // Enable script grouping (default: true)
     useScriptComments: true     // Use scriptsComments for descriptions (default: true)
   })
-  
+
   // Add your custom actions
   q.action('deploy')
     .shell('npm run build && npm run deploy')
@@ -173,7 +173,7 @@ Here's a full example showing all features:
 ```
 Main Menu:
   s) start - Start the production server
-  
+
 dev
 ├── (default) - Development mode with hot reload
 └── debug - Development mode with debugger attached
@@ -604,7 +604,7 @@ action('new-project')
   .wizard([
     { prompts: [{ name: 'name', message: 'Project name' }] },
     { prompts: [{ name: 'type', type: 'select', message: 'Project type', options: ['app', 'library', 'plugin'] }] },
-    { 
+    {
       prompts: [{ name: 'features', type: 'select', message: 'Features', options: ['testing', 'linting', 'ci/cd', 'none'] }],
       when: (values) => values.type !== 'plugin'
     },
@@ -729,7 +729,7 @@ action('deploy')
 action('deploy')
   .wizard([
     { prompts: [{ name: 'env', message: 'Environment' }] },
-    { 
+    {
       prompts: [{ name: 'confirm', type: 'confirm', message: 'Deploy to production?' }],
       when: (values) => values.env === 'prod'
     }
@@ -754,7 +754,7 @@ export default function(q) {
   q.action('Build')
     .help(`
       Builds the application for production.
-      
+
       This will:
       - Compile TypeScript
       - Bundle assets
@@ -774,19 +774,19 @@ export default function(q) {
   q.action('Database Migration')
     .help(`
       Run database migrations
-      
+
       This command will apply all pending migrations to the database.
       Make sure you have backed up your database before running this!
-      
+
       USAGE:
         Select this action and confirm when prompted.
-      
+
       EXAMPLES:
         - Development: Migrations run against local DB
         - Production: Requires confirmation and creates backup
-      
+
       WARNING: This cannot be undone! Always backup first.
-      
+
       See docs/migrations.md for more information.
     `)
     .select('env', 'Environment', ['dev', 'staging', 'prod'])
@@ -805,31 +805,31 @@ export default function(q) {
   q.action('Setup Development Environment')
     .help(`
       Development Environment Setup Wizard
-      
+
       This wizard will guide you through:
-      
+
       1. Installing dependencies
          - Node.js packages via npm
          - System dependencies via package manager
-      
+
       2. Database configuration
          - Creates local PostgreSQL database
          - Runs initial migrations
          - Seeds with test data
-      
+
       3. Environment configuration
          - Creates .env file from template
          - Configures API keys
          - Sets up local SSL certificates
-      
+
       4. Verification
          - Runs health checks
          - Validates configuration
          - Starts development server
-      
+
       TIME: Approximately 5-10 minutes
       REQUIREMENTS: Docker, Node.js 18+, PostgreSQL
-      
+
       If you encounter issues, see: docs/setup-troubleshooting.md
     `)
     .wizard([
@@ -843,14 +843,14 @@ export default function(q) {
   q.action('Production Deploy')
     .help(`
       Production Deployment
-      
+
       PREREQUISITES:
         ✓ All tests must pass
         ✓ Code reviewed and approved
         ✓ Version tagged in git
         ✓ Changelog updated
         ✓ Team notified
-      
+
       PROCESS:
         1. Builds production bundle
         2. Runs final test suite
@@ -858,16 +858,16 @@ export default function(q) {
         4. Deploys to production servers
         5. Runs smoke tests
         6. Monitors for 5 minutes
-      
+
       ROLLBACK:
         If deployment fails, automatic rollback occurs.
         Manual rollback: npm run deploy:rollback
-      
+
       MONITORING:
         - Logs: https://logs.example.com
         - Metrics: https://metrics.example.com
         - Alerts: Sent to #deployments Slack channel
-      
+
       EMERGENCY CONTACT: ops@example.com
     `)
     .requireConfirmation('Deploy to production? This is a critical operation.')
@@ -884,28 +884,28 @@ export default function(q) {
   q.action('API Testing')
     .help(`
       API Testing Guide
-      
+
       This runs the full API test suite including:
       - Unit tests for controllers
       - Integration tests for endpoints
       - Authentication/authorization tests
       - Rate limiting tests
-      
+
       RUNNING SPECIFIC TESTS:
         To run only unit tests:
           npm run test:api:unit
-        
+
         To run a specific test file:
           npm run test:api -- path/to/test.js
-      
+
       ENVIRONMENT VARIABLES:
         API_URL     - API endpoint (default: http://localhost:3000)
         TEST_TOKEN  - Auth token for tests (optional)
         TIMEOUT     - Test timeout in ms (default: 5000)
-      
+
       EXAMPLE:
         API_URL=https://staging.api.com npm run test:api
-      
+
       For more information, see:
         docs/testing/api-tests.md
     `)
@@ -922,32 +922,32 @@ export default function(q) {
   q.action('Reset Database')
     .help(`
       ⚠️  DESTRUCTIVE OPERATION ⚠️
-      
+
       This will PERMANENTLY DELETE all data in the database!
-      
+
       WHAT HAPPENS:
         1. Drops all tables
         2. Recreates schema from migrations
         3. Optionally seeds with test data
-      
+
       ⚠️  WARNING:
         - All existing data will be lost
         - This cannot be undone
         - Backups are NOT created automatically
-      
+
       BEFORE RUNNING:
         1. Create a manual backup:
            npm run db:backup
-        
+
         2. Verify you're not on production:
            echo $NODE_ENV
-        
+
         3. Inform your team
-      
+
       RECOVERY:
         If you need to restore from backup:
           npm run db:restore <backup-file>
-      
+
       🚨 ONLY USE IN DEVELOPMENT/TESTING 🚨
     `)
     .select('env', 'Environment', ['dev', 'test'])
@@ -985,7 +985,7 @@ export default function(q) {
   q.template('deployment')
     .help(`
       Standard Deployment Process
-      
+
       All deployments follow this workflow:
       1. Build for production
       2. Run test suite
@@ -995,20 +995,20 @@ export default function(q) {
     `)
     .before('npm run build')
     .then('npm test')
-  
+
   // Actions inherit the help text
   q.action('Deploy Staging')
     .fromTemplate(q.getTemplate('deployment'))
     .shell('deploy.sh staging')
     // Inherits the standard deployment help
-  
+
   q.action('Deploy Production')
     .fromTemplate(q.getTemplate('deployment'))
     .help(`
       Production Deployment
-      
+
       ${q.getTemplate('deployment')._helpText}
-      
+
       ADDITIONAL REQUIREMENTS FOR PRODUCTION:
       - Approval from 2 team members
       - All integration tests passing
@@ -1043,19 +1043,19 @@ export default function(q) {
   q.action('Deploy')
     .help(`
       Production Deployment
-      
+
       Prerequisites: Tests passing, code reviewed
       Process: Build → Test → Deploy → Verify
       Time: ~5 minutes
       Rollback: npm run deploy:rollback
     `)
     .shell('npm run deploy:prod')
-  
+
   // ✗ Avoid: Too brief, not helpful
   q.action('Deploy')
     .help('Deploys the app')
     .shell('npm run deploy:prod')
-  
+
   // ✗ Avoid: Too verbose, hard to read
   q.action('Deploy')
     .help(`
@@ -1090,7 +1090,7 @@ export default function(q) {
     .select('env', 'Environment', ['dev', 'staging', 'prod'])
     .requireConfirmation('Run migrations on {{env}}?')
     .shell('migrate --env={{env}}')
-  
+
   // With chaining
   q.action('Full CI')
     .help('Complete CI pipeline: lint → test → build → deploy')
@@ -1098,13 +1098,13 @@ export default function(q) {
     .then('npm test')
     .then('npm run build')
     .then('npm run deploy')
-  
+
   // With conditions
   q.action('Dev Tools')
     .help('Opens development tools (only available in dev mode)')
     .condition(envEquals('NODE_ENV', 'development'))
     .shell('npm run dev-tools')
-  
+
   // With favorites
   q.action('Quick Deploy')
     .favorite()
@@ -1227,15 +1227,15 @@ action('migrate')
 Quickey provides helper functions for common condition checks:
 
 ```javascript
-import { 
-  envExists, 
-  envEquals, 
-  fileExists, 
+import {
+  envExists,
+  envEquals,
+  fileExists,
   commandExists,
   commandSucceeds,
-  not, 
-  and, 
-  or 
+  not,
+  and,
+  or
 } from 'quickey'
 
 // Check environment variables
@@ -1763,17 +1763,17 @@ export default function(q) {
   q.action('DB Seed').description('Seed database with test data')
   q.action('DB Reset').description('Reset database')
   q.action('DB Backup').description('Backup production database')
-  
+
   // Build commands
   q.action('Build Prod').description('Production build')
   q.action('Build Dev').description('Development build')
   q.action('Build Docs').description('Build documentation site')
-  
+
   // Test commands
   q.action('Test Unit').description('Run unit tests')
   q.action('Test Integration').description('Run integration tests')
   q.action('Test E2E').description('Run end-to-end tests')
-  
+
   // Deploy commands
   q.action('Deploy AWS').description('Deploy to AWS')
   q.action('Deploy Azure').description('Deploy to Azure')
@@ -1855,14 +1855,14 @@ export default function(q) {
   q.action('Build')
     .favorite()
     .shell('npm run build')
-  
+
   q.action('Test')
     .favorite()
     .shell('npm test')
-  
+
   q.action('Deploy')
     .shell('npm run deploy')
-  
+
   // Favorites (Build and Test) will appear first in the menu
   // marked with ★ symbol
 }
@@ -1897,13 +1897,13 @@ export default function(q) {
     .favorite()
     .shell('npm run build')
     .then('npm test')
-  
+
   // favorite() after other methods
   q.action('Quick Deploy')
     .shell('npm run deploy')
     .notify('Deployed!')
     .favorite()
-  
+
   // favorite() in the middle
   q.action('Quick Test')
     .env('NODE_ENV', 'test')
@@ -1923,23 +1923,23 @@ export default function(q) {
   q.action('Status')
     .favorite()
     .shell('git status')
-  
+
   q.action('Logs')
     .shell('git log')
-  
+
   // Category with favorites
   q.category('Docker').content(q => {
     q.action('Up')
       .favorite()
       .shell('docker-compose up')
-    
+
     q.action('Down')
       .shell('docker-compose down')
-    
+
     q.action('Logs')
       .favorite()
       .shell('docker-compose logs')
-    
+
     // Within this category:
     // ★ Up and ★ Logs appear first
     // Down appears after
@@ -1957,20 +1957,20 @@ export default function(q) {
   q.action('Build')
     .favorite()
     .shell('npm run build')
-  
+
   // Regular action
   q.action('Test')
     .shell('npm test')
-  
+
   // Persistent favorite (always visible)
   q.action('Quick Status', true)
     .favorite()
     .shell('git status')
-  
+
   // Persistent action (always visible)
   q.action('Help', true)
     .shell('echo "Help text"')
-  
+
   // Display:
   // Regular section:
   //   ★ Build (favorite)
@@ -1992,18 +1992,18 @@ export default function(q) {
     .favorite()
     .before('echo "Quick command starting..."')
     .after('echo "Quick command done!"')
-  
+
   // Actions using this template are automatically favorites
   q.action('Quick Build')
     .fromTemplate(q.getTemplate('quick-commands'))
     .shell('npm run build')
-  
+
   q.action('Quick Test')
     .fromTemplate(q.getTemplate('quick-commands'))
     .shell('npm test')
-  
+
   // Both actions above will be marked as favorites
-  
+
   // You can also override the favorite setting
   q.action('Not Quick')
     .fromTemplate(q.getTemplate('quick-commands'))
@@ -2024,13 +2024,13 @@ export default function(q) {
     .select('env', 'Environment', ['dev', 'staging', 'prod'])
     .requireConfirmation('Deploy to {{env}}?')
     .shell('deploy.sh {{env}}')
-  
+
   // Favorite with conditions
   q.action('Dev Server')
     .favorite()
     .condition(envEquals('NODE_ENV', 'development'))
     .shell('npm run dev')
-  
+
   // Favorite with chaining
   q.action('CI Pipeline')
     .favorite()
@@ -2038,7 +2038,7 @@ export default function(q) {
     .then('npm test')
     .then('npm run deploy')
     .onError('echo "Pipeline failed"')
-  
+
   // Favorite with hooks
   q.action('Deploy Prod')
     .favorite()
@@ -2046,7 +2046,7 @@ export default function(q) {
     .before('npm test')
     .shell('npm run deploy:prod')
     .after('npm run verify')
-  
+
   // Favorite with output handling
   q.action('Get Version')
     .favorite()
@@ -2054,7 +2054,7 @@ export default function(q) {
     .silent()
     .shell('git describe --tags')
     .notify('Current version: {{output}}')
-  
+
   // Favorite with environment variables
   q.action('Build Prod')
     .favorite()
@@ -2455,12 +2455,12 @@ export default function(q) {
   q.action('Monitor Logs')
     .watch(2000)
     .shell('tail -n 20 app.log')
-  
+
   // Check server health every 5 seconds
   q.action('Health Check')
     .watch(5000)
     .shell('curl -s http://localhost:3000/health | jq .')
-  
+
   // Run tests every 1 second
   q.action('Test Watch')
     .watch(1000)
@@ -2478,17 +2478,17 @@ export default function(q) {
   q.action('Watch Config')
     .watchFiles(['config.json'])
     .shell('echo "Config changed!" && cat config.json')
-  
+
   // Watch multiple files
   q.action('Watch Sources')
     .watchFiles(['src/index.ts', 'src/app.ts'])
     .shell('npm run build')
-  
+
   // Watch directories recursively
   q.action('Watch All Sources')
     .watchFiles(['src/', 'lib/'])
     .shell('npm run build && npm test')
-  
+
   // Watch patterns (glob-like)
   q.action('Watch TypeScript')
     .watchFiles(['**/*.ts', '**/*.tsx'])
@@ -2506,7 +2506,7 @@ export default function(q) {
     .prompt('path', 'Directory to watch')
     .watchFiles(['{{path}}/**/*'])
     .shell('echo "Changes detected in {{path}}"')
-  
+
   q.action('Monitor Service')
     .select('service', 'Service', ['api', 'web', 'worker'])
     .watch(3000)
@@ -2525,7 +2525,7 @@ export default function(q) {
     .env('WATCH_MODE', 'true')
     .watchFiles(['src/**/*.test.ts'])
     .shell('npm test')
-  
+
   q.action('Monitor with Config')
     .prompt('env', 'Environment')
     .env('ENV', '{{env}}')
@@ -2545,7 +2545,7 @@ export default function(q) {
     .in('./packages/{{pkg}}')
     .watchFiles(['src/**/*.ts'])
     .shell('npm run build')
-  
+
   q.action('Monitor Logs')
     .in('/var/log/myapp')
     .watch(2000)
@@ -2564,7 +2564,7 @@ export default function(q) {
     .silent()
     .watchFiles(['src/**/*.ts'])
     .shell('npm run build')
-  
+
   // Capture and notify
   q.action('Watch Version')
     .capture()
@@ -2743,7 +2743,7 @@ export default function(q) {
   // All shell commands are tracked
   q.action('Build')
     .shell('npm run build')
-  
+
   // JavaScript actions are tracked too
   q.action('Log Info')
     .javascript(() => console.log('Info'))
@@ -2832,6 +2832,195 @@ The `h` key only appears when:
 3. **Display**: Press `h` to see a menu of recent commands
 4. **Re-execution**: Selecting a history entry re-runs the command
 5. **Limits**: Oldest entries are automatically removed when limit (50) is reached
+
+## Timeout
+
+Set a maximum execution time for commands. If a command exceeds the timeout, it will be automatically terminated. This is useful for preventing stuck processes and enforcing execution time limits.
+
+### Basic Usage
+
+```javascript
+// Set a 5 second timeout for a build command
+action('Build')
+  .timeout(5000)  // milliseconds
+  .shell('npm run build')
+
+// Timeout for a long-running test
+action('Integration Tests')
+  .timeout(30000)  // 30 seconds
+  .shell('npm run test:integration')
+
+// Timeout for a potentially hanging service
+action('Start Dev Server')
+  .timeout(10000)
+  .shell('npm start')
+```
+
+### Timeout with Different Command Types
+
+**Synchronous Commands:**
+```javascript
+// Simple shell command with timeout
+action('Compile')
+  .timeout(15000)
+  .shell('tsc --build')
+```
+
+**Asynchronous Commands:**
+```javascript
+// Async command with timeout
+action('Deploy')
+  .timeout(60000)  // 1 minute
+  .async('deploy.sh')
+```
+
+**Parallel Commands:**
+```javascript
+// Each parallel task has the timeout applied
+action('Run All Tests')
+  .timeout(10000)  // Each task limited to 10 seconds
+  .parallel([
+    'npm run test:unit',
+    'npm run test:e2e',
+    'npm run lint'
+  ])
+```
+
+### Combining with Other Features
+
+**With Hooks:**
+```javascript
+action('Build with Timeout')
+  .timeout(30000)
+  .before(() => console.log('Starting build...'))
+  .shell('npm run build')
+  .after(() => console.log('Build completed!'))
+  .catch(() => console.log('Build failed or timed out!'))
+```
+
+**With Command Chains:**
+```javascript
+// Each command in the chain respects the timeout
+action('Full Build Pipeline')
+  .timeout(20000)
+  .shell('npm run clean')
+  .then('npm run build')
+  .then('npm run test')
+```
+
+**With Prompts:**
+```javascript
+action('Custom Build')
+  .prompt('target', { type: 'text', message: 'Build target?' })
+  .timeout(15000)
+  .shell('npm run build -- --target {{target}}')
+```
+
+### Configuration Precedence
+
+Timeout can be set at three levels:
+
+```javascript
+export default {
+  // Global default timeout for all actions
+  timeout: 30000,
+
+  categories: [{
+    name: 'Build',
+    // Category-level timeout
+    timeout: 60000,
+    items: [
+      // Action-level timeout (highest priority)
+      action('Quick Build')
+        .timeout(10000)
+        .shell('npm run build:fast'),
+
+      // Uses category timeout (60000)
+      action('Full Build')
+        .shell('npm run build'),
+    ]
+  }],
+
+  items: [
+    // Uses global timeout (30000)
+    action('Test')
+      .shell('npm test')
+  ]
+}
+```
+
+**Precedence order (highest to lowest):**
+1. Action-level `.timeout()` method
+2. Category-level `timeout` property
+3. Global `timeout` property
+4. No timeout (unlimited)
+
+### Timeout Behavior
+
+**When a timeout occurs:**
+- The command process is terminated with SIGTERM
+- An error message is displayed: `"Command timed out after Xms"`
+- The action is marked as failed (exit code handling)
+- `.catch()` hooks are triggered if defined
+- `.after()` hooks still execute (cleanup)
+- For parallel commands, only the timed-out task is terminated
+
+**Error Handling:**
+```javascript
+action('May Timeout')
+  .timeout(5000)
+  .shell('long-running-command')
+  .catch(() => {
+    // This runs on both regular errors AND timeouts
+    console.log('Command failed or timed out')
+  })
+```
+
+### Use Cases
+
+**Prevent Hanging Builds:**
+```javascript
+action('Safe Build')
+  .timeout(300000)  // 5 minutes max
+  .shell('npm run build')
+```
+
+**CI/CD Pipeline Limits:**
+```javascript
+action('Deploy')
+  .timeout(600000)  // 10 minutes max
+  .confirm('Deploy to production?')
+  .shell('./deploy.sh')
+  .notify('Deployment complete')
+```
+
+**Development Server Auto-restart:**
+```javascript
+action('Dev Server')
+  .timeout(120000)  // Kill after 2 minutes
+  .async('npm run dev')
+  .after(() => console.log('Server stopped'))
+```
+
+**Resource-Intensive Tests:**
+```javascript
+action('Load Tests')
+  .timeout(180000)  // 3 minutes
+  .before(() => console.log('Starting load tests...'))
+  .shell('npm run test:load')
+  .catch(() => console.log('Tests timed out or failed'))
+```
+
+### Tips
+
+- Use appropriate timeouts for different command types (quick builds vs. full deployments)
+- Remember timeouts are in milliseconds (1000ms = 1 second)
+- For parallel commands, the timeout applies to each individual task
+- Timeouts help catch infinite loops or hanging processes early
+- In CI/CD environments, timeouts prevent wasted build minutes
+- Consider setting conservative timeouts globally, then override for specific actions
+- Use `.catch()` hooks to handle timeout errors gracefully
+- Timeouts work with watch mode - each watch cycle respects the timeout
 
 ## Working Directory
 
@@ -3314,16 +3503,16 @@ export default function(q) {
     .before('git fetch')
     .env('GIT_USER', 'CI Bot')
     .in('./repo')
-  
+
   // Apply template to multiple actions
   q.action('Push')
     .fromTemplate(gitTemplate)
     .shell('git push origin main')
-  
+
   q.action('Pull')
     .fromTemplate(gitTemplate)
     .shell('git pull origin main')
-  
+
   q.action('Status')
     .fromTemplate(gitTemplate)
     .shell('git status')
@@ -3341,18 +3530,18 @@ export default function(q) {
     .before('git fetch')
     .env('GIT_USER', 'CI Bot')
     .in('./repo')
-  
+
   q.template('deploy-base')
     .requireConfirmation('Proceed with deployment?')
     .before(() => console.log('Starting deployment...'))
     .after(() => console.log('Deployment complete!'))
     .env('DEPLOY_USER', process.env.USER)
-  
+
   // Use stored templates
   q.action('Push')
     .fromTemplate(q.getTemplate('git-base'))
     .shell('git push')
-  
+
   q.action('Deploy Staging')
     .fromTemplate(q.getTemplate('deploy-base'))
     .prompt('version', 'Version')
@@ -3421,15 +3610,15 @@ export default function(q) {
   const loggingTemplate = q.action()
     .before(() => console.log('Started'))
     .after(() => console.log('Finished'))
-  
+
   const gitTemplate = q.action()
     .before('git fetch')
     .in('./repo')
-  
+
   const dockerTemplate = q.action()
     .env('DOCKER_BUILDKIT', '1')
     .before('docker login')
-  
+
   // Combine multiple templates
   q.action('Deploy')
     .fromTemplate(loggingTemplate)
@@ -3452,29 +3641,29 @@ export default function(q) {
     .requireConfirmation(`Deploy to ${env}?`)
     .before(`echo "Deploying to ${env}"`)
     .after(`curl https://${env}.example.com/health`)
-  
+
   // Use dynamic templates
   q.action('Deploy Dev')
     .fromTemplate(deployTemplate('development'))
     .shell('deploy.sh')
-  
+
   q.action('Deploy Prod')
     .fromTemplate(deployTemplate('production'))
     .shell('deploy.sh')
-  
+
   // Conditional template
   const ciTemplate = () => {
     const base = q.action()
       .env('CI', 'true')
       .silent()
-    
+
     if (process.env.CI_DEBUG) {
       base.before('env | grep CI')
     }
-    
+
     return base
   }
-  
+
   q.action('CI Build')
     .fromTemplate(ciTemplate())
     .shell('npm run build')
@@ -3491,24 +3680,24 @@ export default function(q) {
   const loggingTemplate = q.action()
     .before(() => console.log('Start'))
     .after(() => console.log('End'))
-  
+
   const errorHandlingTemplate = q.action()
     .onError(() => console.error('Failed'))
     .onError('notify-send "Build failed"')
-  
+
   // Composite template
   const buildTemplate = q.action()
     .fromTemplate(loggingTemplate)
     .fromTemplate(errorHandlingTemplate)
     .env('NODE_ENV', 'production')
     .before('npm install')
-  
+
   // Use composite
   q.action('Build Frontend')
     .fromTemplate(buildTemplate)
     .in('./frontend')
     .shell('npm run build')
-  
+
   q.action('Build Backend')
     .fromTemplate(buildTemplate)
     .in('./backend')
@@ -3630,22 +3819,22 @@ export default function(q) {
   const promptedTemplate = q.action()
     .prompt('version', 'Version number')
     .prompt('message', 'Commit message')
-  
+
   q.action('Commit and Tag')
     .fromTemplate(promptedTemplate)
     .shell('git commit -m "{{message}}"')
     .then('git tag v{{version}}')
-  
+
   // Template with conditions
   const prodTemplate = q.action()
     .requireConfirmation('Deploy to production?')
     .condition(envEquals('NODE_ENV', 'production'))
     .env('DEPLOY_ENV', 'production')
-  
+
   q.action('Prod Deploy')
     .fromTemplate(prodTemplate)
     .shell('deploy.sh')
-  
+
   // Template with chaining
   const ciTemplate = q.action()
     .before('npm install')
@@ -3653,16 +3842,16 @@ export default function(q) {
     .then('npm test')
     .then('npm run build')
     .onError('echo "CI failed"')
-  
+
   q.action('CI Pipeline')
     .fromTemplate(ciTemplate)
     .shell('echo "Starting CI"')
-  
+
   // Template with output handling
   const outputTemplate = q.action()
     .capture()
     .notify('Completed: {{output}}')
-  
+
   q.action('Get Version')
     .fromTemplate(outputTemplate)
     .shell('npm version | grep "my-app"')

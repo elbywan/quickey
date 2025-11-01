@@ -63,6 +63,7 @@ export class Action extends Item {
     _parallelTasks: ParallelTask[] = []
     _watchOptions?: WatchOptions
     _helpText?: string
+    _timeout?: number  // Timeout in milliseconds
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -70,7 +71,7 @@ export class Action extends Item {
 
             // Handle prompts if defined
             let promptValues: Record<string, string> = {}
-            
+
             // Handle wizard steps
             if (this._wizardSteps.length > 0 && (command || this._workingDir)) {
                 const { printer } = state
@@ -84,7 +85,7 @@ export class Action extends Item {
 
                     // Execute step prompts
                     const stepValues = await promptUserMultiple(step.prompts)
-                    
+
                     // Merge step values into overall prompt values
                     promptValues = { ...promptValues, ...stepValues }
                 }
@@ -123,7 +124,7 @@ export class Action extends Item {
                 for (const [key, value] of Object.entries(this._envVars)) {
                     processedEnv[key] = replacePromptPlaceholders(value, promptValues)
                 }
-                
+
                 // Merge with current process.env
                 envOptions.env = { ...process.env, ...processedEnv }
             }
@@ -132,7 +133,7 @@ export class Action extends Item {
             if (this._confirmMessage) {
                 const { printer } = state
                 const { promptConfirm } = await import('../tools/index.js')
-                
+
                 printer.line('', false)
                 const confirmed = await promptConfirm(this._confirmMessage, this._confirmDefault)
                 printer.line('', false)
@@ -152,12 +153,15 @@ export class Action extends Item {
             if (this._silentOutput) {
                 finalOptions.silent = true
             }
+            if (this._timeout !== undefined) {
+                finalOptions.timeout = this._timeout
+            }
 
             // Handle watch mode if defined
             if (this._watchOptions) {
                 const { runWatch } = await import('../tools/index.js')
                 await runWatch(this._label, this, this._watchOptions, finalOptions, promptValues)
-                
+
                 // Restore original working directory if it was changed
                 if (originalCwd !== undefined) {
                     state.current._cwd = originalCwd
@@ -182,7 +186,7 @@ export class Action extends Item {
                 const { runParallel } = await import('../tools/index.js')
                 await runParallel(this._label, this._parallelTasks, mix(finalOptions, envOptions))
                 // Parallel execution doesn't support chaining or after hooks
-                
+
                 // Show notification message if defined
                 if (this._notifyMessage) {
                     const { printer } = state
@@ -191,7 +195,7 @@ export class Action extends Item {
                     printer.line(`✓ ${processedMessage}`, false)
                     printer.line('', false)
                 }
-                
+
                 // Restore original working directory if it was changed
                 if (originalCwd !== undefined) {
                     state.current._cwd = originalCwd
@@ -220,7 +224,7 @@ export class Action extends Item {
             if (this._chains.length > 0) {
                 for (const chain of this._chains) {
                     const lastCode = state.lastCode ?? 0
-                    
+
                     // Skip if conditions don't match
                     if (chain.onError && lastCode === 0) continue
                     if (!chain.onError && lastCode !== 0) break
@@ -231,7 +235,7 @@ export class Action extends Item {
                         if (promptValues.output) {
                             chainCommand = replacePromptPlaceholders(chainCommand, promptValues)
                         }
-                        
+
                         // Merge chain options with env options
                         const chainOptions = mix(chain.options || {}, envOptions)
                         runCommand(this._label, chainCommand, chainOptions)
@@ -251,7 +255,7 @@ export class Action extends Item {
                         if (promptValues.output) {
                             hookCommand = replacePromptPlaceholders(hookCommand, promptValues)
                         }
-                        
+
                         const hookOptions = mix(hook.options || {}, envOptions)
                         runCommand(this._label, hookCommand, hookOptions)
                     } else if (hook.type === 'javascript' && hook.code) {
@@ -1044,6 +1048,36 @@ export class Action extends Item {
      */
     help(text: string): this {
         this._helpText = text
+        return this
+    }
+
+    /**
+     * Sets a timeout for the command execution.
+     * If the command exceeds the timeout, it will be terminated.
+     *
+     * @param ms - Timeout in milliseconds
+     *
+     * @example
+     * // Set a 5 second timeout
+     * action('Build')
+     *   .timeout(5000)
+     *   .shell('npm run build')
+     *
+     * // Set a 30 second timeout for long-running tasks
+     * action('Deploy')
+     *   .timeout(30000)
+     *   .shell('npm run deploy')
+     *
+     * // Use with parallel tasks
+     * action('Test All')
+     *   .timeout(10000)
+     *   .parallel([
+     *     { label: 'Unit Tests', command: 'npm run test:unit' },
+     *     { label: 'E2E Tests', command: 'npm run test:e2e' }
+     *   ])
+     */
+    timeout(ms: number): this {
+        this._timeout = ms
         return this
     }
 }
