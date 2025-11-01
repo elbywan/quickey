@@ -40,6 +40,7 @@ export class Action extends Item {
     _captureOutput: boolean = false
     _silentOutput: boolean = false
     _notifyMessage?: string
+    _isFavorite: boolean = false
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -771,6 +772,31 @@ export class Action extends Item {
             this._condition = templateAction._condition
         }
 
+        // Favorite flag (only if not already set)
+        if (templateAction._isFavorite && !this._isFavorite) {
+            this._isFavorite = true
+        }
+
+        return this
+    }
+
+    /**
+     * Mark this action as a favorite/pinned action
+     * Favorite actions appear at the top of the action list with a visual marker
+     *
+     * @example
+     * // Mark an action as favorite
+     * action('Deploy')
+     *   .favorite()
+     *   .shell('npm run deploy')
+     *
+     * // Favorite actions appear at the top
+     * action('Build').shell('npm run build')
+     * action('Test').favorite().shell('npm test')  // This appears first
+     * action('Lint').shell('npm run lint')
+     */
+    favorite(): this {
+        this._isFavorite = true
         return this
     }
 }

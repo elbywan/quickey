@@ -985,6 +985,324 @@ q.action('Start').description('Start API server for backend development')
 - Whitespace is automatically trimmed from search queries
 - Empty search shows all available actions
 
+## Favorite Actions
+
+Mark frequently used actions as favorites to keep them at the top of the menu. Favorites are displayed first with a star (★) marker, making it easy to access your most important commands.
+
+### Basic Usage
+
+```javascript
+export default function(q) {
+  // Mark actions as favorites
+  q.action('Build')
+    .favorite()
+    .shell('npm run build')
+  
+  q.action('Test')
+    .favorite()
+    .shell('npm test')
+  
+  q.action('Deploy')
+    .shell('npm run deploy')
+  
+  // Favorites (Build and Test) will appear first in the menu
+  // marked with ★ symbol
+}
+```
+
+### Favorite Display
+
+When you have favorite actions, the menu automatically reorganizes:
+
+```
+Main Menu:
+★ b) Build - Build the project
+★ t) Test - Run tests
+  d) Deploy - Deploy application
+  l) Lint - Run linter
+```
+
+**Key points:**
+- Favorites are sorted to the top within their group (regular or persistent items)
+- Within favorites, items are alphabetically sorted by label
+- The ★ marker clearly indicates favorite items
+- Non-favorite items appear below favorites, also alphabetically sorted
+
+### Favorite with Method Chaining
+
+The `favorite()` method is chainable and can be placed anywhere in the chain:
+
+```javascript
+export default function(q) {
+  // favorite() before other methods
+  q.action('Quick Build')
+    .favorite()
+    .shell('npm run build')
+    .then('npm test')
+  
+  // favorite() after other methods
+  q.action('Quick Deploy')
+    .shell('npm run deploy')
+    .notify('Deployed!')
+    .favorite()
+  
+  // favorite() in the middle
+  q.action('Quick Test')
+    .env('NODE_ENV', 'test')
+    .favorite()
+    .shell('npm test')
+    .onError('echo "Tests failed"')
+}
+```
+
+### Favorites with Categories
+
+Favorites work within each category independently:
+
+```javascript
+export default function(q) {
+  // Root level favorites
+  q.action('Status')
+    .favorite()
+    .shell('git status')
+  
+  q.action('Logs')
+    .shell('git log')
+  
+  // Category with favorites
+  q.category('Docker').content(q => {
+    q.action('Up')
+      .favorite()
+      .shell('docker-compose up')
+    
+    q.action('Down')
+      .shell('docker-compose down')
+    
+    q.action('Logs')
+      .favorite()
+      .shell('docker-compose logs')
+    
+    // Within this category:
+    // ★ Up and ★ Logs appear first
+    // Down appears after
+  })
+}
+```
+
+### Favorites with Persistent Items
+
+Favorites work with both regular and persistent actions:
+
+```javascript
+export default function(q) {
+  // Regular favorite
+  q.action('Build')
+    .favorite()
+    .shell('npm run build')
+  
+  // Regular action
+  q.action('Test')
+    .shell('npm test')
+  
+  // Persistent favorite (always visible)
+  q.action('Quick Status', true)
+    .favorite()
+    .shell('git status')
+  
+  // Persistent action (always visible)
+  q.action('Help', true)
+    .shell('echo "Help text"')
+  
+  // Display:
+  // Regular section:
+  //   ★ Build (favorite)
+  //   Test (non-favorite)
+  // Persistent section:
+  //   ★ Quick Status (favorite)
+  //   Help (non-favorite)
+}
+```
+
+### Favorites with Templates
+
+Favorite flags are inherited from templates:
+
+```javascript
+export default function(q) {
+  // Create a favorite template
+  const quickTemplate = q.template('quick-commands')
+    .favorite()
+    .before('echo "Quick command starting..."')
+    .after('echo "Quick command done!"')
+  
+  // Actions using this template are automatically favorites
+  q.action('Quick Build')
+    .fromTemplate(q.getTemplate('quick-commands'))
+    .shell('npm run build')
+  
+  q.action('Quick Test')
+    .fromTemplate(q.getTemplate('quick-commands'))
+    .shell('npm test')
+  
+  // Both actions above will be marked as favorites
+  
+  // You can also override the favorite setting
+  q.action('Not Quick')
+    .fromTemplate(q.getTemplate('quick-commands'))
+    .shell('echo "Not marked as favorite"')
+    // Note: If already set on action, template won't override
+}
+```
+
+### Integration with Other Features
+
+Favorites work seamlessly with all Quickey features:
+
+```javascript
+export default function(q) {
+  // Favorite with prompts
+  q.action('Quick Deploy')
+    .favorite()
+    .select('env', 'Environment', ['dev', 'staging', 'prod'])
+    .requireConfirmation('Deploy to {{env}}?')
+    .shell('deploy.sh {{env}}')
+  
+  // Favorite with conditions
+  q.action('Dev Server')
+    .favorite()
+    .condition(envEquals('NODE_ENV', 'development'))
+    .shell('npm run dev')
+  
+  // Favorite with chaining
+  q.action('CI Pipeline')
+    .favorite()
+    .shell('npm run build')
+    .then('npm test')
+    .then('npm run deploy')
+    .onError('echo "Pipeline failed"')
+  
+  // Favorite with hooks
+  q.action('Deploy Prod')
+    .favorite()
+    .before('npm run build')
+    .before('npm test')
+    .shell('npm run deploy:prod')
+    .after('npm run verify')
+  
+  // Favorite with output handling
+  q.action('Get Version')
+    .favorite()
+    .capture()
+    .silent()
+    .shell('git describe --tags')
+    .notify('Current version: {{output}}')
+  
+  // Favorite with environment variables
+  q.action('Build Prod')
+    .favorite()
+    .env('NODE_ENV', 'production')
+    .env('OPTIMIZE', 'true')
+    .shell('npm run build')
+}
+```
+
+### Use Cases
+
+**Development Workflow:**
+```javascript
+// Mark frequently used development commands as favorites
+q.action('Dev Server')
+  .favorite()
+  .shell('npm run dev')
+
+q.action('Test Watch')
+  .favorite()
+  .shell('npm run test:watch')
+
+q.action('Build')
+  .favorite()
+  .shell('npm run build')
+
+// Less frequent commands
+q.action('Clean Cache')
+  .shell('rm -rf node_modules/.cache')
+
+q.action('Update Dependencies')
+  .shell('npm update')
+```
+
+**DevOps Commands:**
+```javascript
+// Quick access to monitoring and logs
+q.action('Logs')
+  .favorite()
+  .shell('kubectl logs -f deployment/app')
+
+q.action('Status')
+  .favorite()
+  .shell('kubectl get pods')
+
+q.action('Restart')
+  .favorite()
+  .requireConfirmation('Restart application?')
+  .shell('kubectl rollout restart deployment/app')
+
+// Less frequent operations
+q.action('Scale Up')
+  .shell('kubectl scale deployment/app --replicas=5')
+
+q.action('Update Config')
+  .shell('kubectl apply -f config.yaml')
+```
+
+**Project Shortcuts:**
+```javascript
+// Your go-to commands
+q.action('Full Rebuild')
+  .favorite()
+  .shell('rm -rf dist')
+  .then('npm run build')
+  .then('npm test')
+
+q.action('Quick Commit')
+  .favorite()
+  .prompt('message', 'Commit message')
+  .shell('git add . && git commit -m "{{message}}"')
+
+q.action('Sync')
+  .favorite()
+  .shell('git pull')
+  .then('npm install')
+  .then('npm run build')
+
+// Occasional tasks
+q.action('Generate Docs')
+  .shell('npm run docs:generate')
+
+q.action('Run Benchmarks')
+  .shell('npm run benchmark')
+```
+
+### How Favorites Work
+
+- **Sorting**: Favorites appear first in their respective groups (regular or persistent)
+- **Marker**: Favorite items are marked with ★ in the menu
+- **Alphabetical**: Within favorites and non-favorites, items are alphabetically sorted
+- **Per-category**: Each category has its own favorite organization
+- **Template support**: Favorite flags are copied from templates to actions
+- **Persistent compatible**: Works with both regular and persistent actions
+- **Feature compatible**: Favorites work with all other Quickey features
+
+### Tips
+
+- Mark your 3-5 most frequently used commands as favorites for quick access
+- Favorites are especially useful in large projects with many commands
+- Use favorites for your daily development workflow commands
+- Combine favorites with keyboard shortcuts for maximum efficiency
+- Review and update your favorites as your workflow evolves
+- Favorites within categories help organize related frequent tasks
+- The ★ marker makes it easy to visually identify your key commands
+
 ## Command History
 
 Quickey automatically tracks all executed commands and allows you to quickly re-run them from a history menu.

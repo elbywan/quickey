@@ -38,24 +38,38 @@ export function printScreen(keyMap?: Map<string, Item>): void {
         .line()
 
     const itemsList = Array.from(keyMap || new Map())
+    
+    // Separate favorites from non-favorites for regular items
+    const regularItemsFavorite = itemsList
+        .filter(([, item]) => !item._persistent && (item as any)._isFavorite)
+        .sort((a, b) => a[1]._label.toLowerCase() > b[1]._label.toLowerCase() ? 1 : -1)
     const regularItems = itemsList
-        .filter(([, item]) => !item._persistent)
+        .filter(([, item]) => !item._persistent && !(item as any)._isFavorite)
+        .sort((a, b) => a[1]._label.toLowerCase() > b[1]._label.toLowerCase() ? 1 : -1)
+    
+    // Separate favorites from non-favorites for persistent items
+    const persistentItemsFavorite = itemsList
+        .filter(([, item]) => item._persistent && (item as any)._isFavorite)
         .sort((a, b) => a[1]._label.toLowerCase() > b[1]._label.toLowerCase() ? 1 : -1)
     const persistentItems = itemsList
-        .filter(([, item]) => item._persistent)
+        .filter(([, item]) => item._persistent && !(item as any)._isFavorite)
         .sort((a, b) => a[1]._label.toLowerCase() > b[1]._label.toLowerCase() ? 1 : -1)
 
-    const printItem = ([key, item]: [string, Item]): void => {
+    const printItem = ([key, item]: [string, Item], isFavorite: boolean = false): void => {
         const color = key === item._label.charAt(0).toLowerCase() ? colors.keys.matching : colors.keys.notMatching
-        printer.line('    ' + c.bold[color](' ' + key + ' ') + '- ' + item.toString(key))
+        const marker = isFavorite ? c.yellow('★ ') : ''
+        printer.line('    ' + c.bold[color](' ' + key + ' ') + '- ' + marker + item.toString(key))
     }
 
-    // Items & categories //
-    regularItems.forEach(printItem)
-    // Persistant items & categories //
-    if (persistentItems.length > 0) {
+    // Favorite items first, then regular items //
+    regularItemsFavorite.forEach(entry => printItem(entry, true))
+    regularItems.forEach(entry => printItem(entry, false))
+    
+    // Persistant items & categories (favorites first if any) //
+    if (persistentItemsFavorite.length > 0 || persistentItems.length > 0) {
         printer.line()
-        persistentItems.forEach(printItem)
+        persistentItemsFavorite.forEach(entry => printItem(entry, true))
+        persistentItems.forEach(entry => printItem(entry, false))
     }
 
     // Common commands //
