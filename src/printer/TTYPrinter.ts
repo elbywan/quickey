@@ -1,9 +1,26 @@
 import type { Printer } from './index.js'
 import * as readline from 'readline'
-import { trim } from '../tools/index.js'
 import type { Writable } from 'stream'
 
 readline.emitKeypressEvents(process.stdin)
+
+// Inline trim function to avoid circular dependency
+function trim(str: string): string {
+    let lines = str.split(/\r?\n/)
+    lines = lines.filter((line, idx) => (idx !== 0 && idx !== lines.length - 1) || line.length > 0)
+    if (lines.length < 2) {
+        return str.trim()
+    }
+
+    const spaceSplit = lines[0].split(/\S+/)
+    const baseIndent = spaceSplit.length < 2 ? 0 : spaceSplit[0].length
+
+    return lines.map(line =>
+        line.length < baseIndent ?
+            line :
+            line.substring(baseIndent)
+    ).join('\n').trim()
+}
 
 export class TTYPrinter implements Printer {
     stream: Writable

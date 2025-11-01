@@ -37,7 +37,7 @@ export class Item {
         return this
     }
 
-    toString(key: string, separator: string = ': '): string {
+    toString(key: string, separator: string = ': ', prefix: string = ''): string {
         const { colors } = state.current._options
         const idx = this._label.toLowerCase().indexOf(key)
         const label = (idx < 0) ? chalk.bold(this._label) : (
@@ -49,6 +49,6 @@ export class Item {
             (this._description && (separator + this._description)) ||
             (this._shell && (separator + this._shell)) ||
             ''
-        return `${label} ${description}`
+        return `${prefix}${label} ${description}`
     }
 }

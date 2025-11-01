@@ -1,0 +1,22 @@
+[
+  {
+    "label": "hello",
+    "description": "Say hello",
+    "shell": "echo \"Hello, World!\""
+  },
+  {
+    "label": "greet",
+    "description": "Greet someone",
+    "prompt": "Enter a name",
+    "shell": "echo \"Hello, {{input}}!\""
+  },
+  {
+    "label": "deploy",
+    "description": "Deploy application",
+    "prompts": [
+      { "name": "env", "message": "Environment (dev/prod)" },
+      { "name": "version", "message": "Version number" }
+    ],
+    "shell": "deploy --env {{env}} --version {{version}}"
+  }
+]

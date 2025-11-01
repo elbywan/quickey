@@ -1,0 +1,15 @@
+{
+  "name": "test-package",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node index.js",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "node --test",
+    "build": "tsc",
+    "lint": "eslint .",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}

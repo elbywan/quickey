@@ -151,3 +151,7 @@ export class Quickey {
         return keyMap
     }
 }
+
+// Initialize the factory to avoid circular dependency
+import { setQuickeyFactory } from '../state/index.js'
+setQuickeyFactory((label: string, description: string) => new Quickey(label, description))

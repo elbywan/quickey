@@ -2,9 +2,21 @@ import type { ChildProcess } from 'child_process'
 import type { Printer } from '../printer/index.js'
 import type { Category } from '../quickey/category.js'
 import type { Item } from '../quickey/item.js'
-import { Quickey } from '../quickey/index.js'
+import type { Quickey } from '../quickey/index.js'
 import { TTYPrinter } from '../printer/index.js'
 import { CircularStringBuffer } from '../tools/index.js'
+import { createQuickey } from './factory.js'
+
+export { setQuickeyFactory } from './factory.js'
+
+// Lazy initialization for printer to avoid circular dependency
+let _printer: Printer | null = null
+function getPrinter(): Printer {
+    if (!_printer) {
+        _printer = new TTYPrinter()
+    }
+    return _printer
+}
 
 export const state: {
     parents: Quickey[];
@@ -17,7 +29,8 @@ export const state: {
 } = {
     parents: [],
     current: null as any,
-    printer: new TTYPrinter(),
+    get printer() { return getPrinter() },
+    set printer(value: Printer) { _printer = value },
     lastCode: 0,
     lastErrorMessage: '',
     asyncRunning: new Map(),
@@ -32,7 +45,7 @@ export function push(label: string, description: string, from?: Category): Quick
     if (state.current) {
         state.parents.push(state.current)
     }
-    const nextQuickey = new Quickey(label, description)
+    const nextQuickey = createQuickey(label, description)
     if (state.current && state.current._options.inheritOptions) {
         nextQuickey._options = state.current._options
     }

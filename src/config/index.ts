@@ -71,7 +71,8 @@ export function populateConfigFromArray (array: ConfigItem[], q: Quickey): void 
     array.forEach(configItem => {
         const item = (configItem.from || configItem.fromArray || configItem.content) ? q.category('') : q.action('')
         Object.entries(configItem).forEach(([func, args]) => {
-            if(func !== 'fromArray' && args instanceof Array) {
+            // Don't spread arrays for methods that expect array parameters
+            if(func !== 'fromArray' && func !== 'prompts' && args instanceof Array) {
                 (item as any)[func](...args)
             } else {
                 (item as any)[func](args)

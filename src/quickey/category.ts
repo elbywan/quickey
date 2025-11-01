@@ -45,6 +45,6 @@ export class Category extends Item {
     }
 
     toString(key: string): string {
-        return super.toString(key, (chalk as any).bold[state.current._options.colors.categoryArrows]('>> '))
+        return super.toString(key, ': ', (chalk as any).bold[state.current._options.colors.categoryArrows]('>> '))
     }
 }
