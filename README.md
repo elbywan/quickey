@@ -456,6 +456,287 @@ action('clean')
   .shell('rm -rf dist/ build/ node_modules/')
 ```
 
+## Multi-step Wizards
+
+Create interactive multi-step wizards with conditional prompts that guide users through complex workflows. Wizards are perfect for scaffolding projects, configuring deployments, or any task that requires multiple sequential inputs.
+
+### Basic Wizard
+
+```javascript
+// Simple multi-step wizard
+action('create-project')
+  .wizard([
+    {
+      prompts: [
+        { name: 'projectType', type: 'select', message: 'Project type', options: ['web', 'cli', 'library'] }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'name', message: 'Project name' },
+        { name: 'author', message: 'Author name' }
+      ]
+    }
+  ])
+  .shell('create-project --type {{projectType}} --name {{name}} --author {{author}}')
+```
+
+### Conditional Steps
+
+Use the `when` function to show or hide steps based on previous answers:
+
+```javascript
+// Wizard with conditional steps
+action('scaffold')
+  .wizard([
+    {
+      // Step 1: Choose project type
+      prompts: [
+        { name: 'type', type: 'select', message: 'Project type', options: ['web', 'mobile', 'cli'] }
+      ]
+    },
+    {
+      // Step 2: Only show if web was selected
+      prompts: [
+        { name: 'framework', type: 'select', message: 'Web framework', options: ['react', 'vue', 'angular'] }
+      ],
+      when: (values) => values.type === 'web'
+    },
+    {
+      // Step 3: Only show if mobile was selected
+      prompts: [
+        { name: 'platform', type: 'select', message: 'Platform', options: ['ios', 'android', 'both'] }
+      ],
+      when: (values) => values.type === 'mobile'
+    },
+    {
+      // Step 4: Always show - final configuration
+      prompts: [
+        { name: 'name', message: 'Project name' },
+        { name: 'typescript', type: 'confirm', message: 'Use TypeScript?', default: true }
+      ]
+    }
+  ])
+  .shell('scaffold --type {{type}} --framework {{framework}} --platform {{platform}} --name {{name}} --ts {{typescript}}')
+```
+
+### Complex Conditions
+
+Combine multiple conditions for advanced workflows:
+
+```javascript
+// Deployment wizard with safety checks
+action('deploy')
+  .wizard([
+    {
+      prompts: [
+        { name: 'env', type: 'select', message: 'Environment', options: ['dev', 'staging', 'prod'] }
+      ]
+    },
+    {
+      // Only ask for confirmation on production
+      prompts: [
+        { name: 'confirm', type: 'confirm', message: 'This will deploy to PRODUCTION. Continue?', default: false }
+      ],
+      when: (values) => values.env === 'prod'
+    },
+    {
+      // Only continue if not production OR if confirmed
+      prompts: [
+        { name: 'version', message: 'Version to deploy' },
+        { name: 'message', message: 'Deployment message' }
+      ],
+      when: (values) => values.env !== 'prod' || values.confirm === 'true'
+    }
+  ])
+  .javascript(function() {
+    // Check if production deployment was cancelled
+    if (this.values?.env === 'prod' && this.values?.confirm !== 'true') {
+      console.log('Production deployment cancelled')
+      return
+    }
+    // Proceed with deployment
+    console.log(`Deploying version ${this.values?.version} to ${this.values?.env}`)
+  })
+```
+
+### All Prompt Types in Wizards
+
+Each wizard step can contain any combination of prompt types:
+
+```javascript
+action('setup-database')
+  .wizard([
+    {
+      prompts: [
+        { name: 'dbType', type: 'select', message: 'Database type', options: ['postgres', 'mysql', 'mongodb'] }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'host', message: 'Database host', type: 'text' },
+        { name: 'port', message: 'Database port', type: 'text' },
+        { name: 'database', message: 'Database name', type: 'text' }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'username', message: 'Username', type: 'text' },
+        { name: 'password', message: 'Password', type: 'password' }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'ssl', type: 'confirm', message: 'Enable SSL?', default: true },
+        { name: 'pool', type: 'confirm', message: 'Enable connection pooling?', default: true }
+      ]
+    }
+  ])
+  .shell('db-setup --type {{dbType}} --host {{host}} --port {{port}} --db {{database}} --user {{username}} --password {{password}} --ssl {{ssl}} --pool {{pool}}')
+```
+
+### Common Wizard Patterns
+
+#### Project Scaffolding Wizard
+
+```javascript
+action('new-project')
+  .wizard([
+    { prompts: [{ name: 'name', message: 'Project name' }] },
+    { prompts: [{ name: 'type', type: 'select', message: 'Project type', options: ['app', 'library', 'plugin'] }] },
+    { 
+      prompts: [{ name: 'features', type: 'select', message: 'Features', options: ['testing', 'linting', 'ci/cd', 'none'] }],
+      when: (values) => values.type !== 'plugin'
+    },
+    { prompts: [{ name: 'git', type: 'confirm', message: 'Initialize git repository?', default: true }] }
+  ])
+  .shell('npm init {{type}} {{name}} -- --features={{features}} --git={{git}}')
+```
+
+#### Configuration Wizard
+
+```javascript
+action('configure-app')
+  .wizard([
+    {
+      prompts: [
+        { name: 'useDb', type: 'confirm', message: 'Use database?', default: true }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'dbType', type: 'select', message: 'Database', options: ['postgres', 'mysql', 'mongodb'] }
+      ],
+      when: (values) => values.useDb === 'true'
+    },
+    {
+      prompts: [
+        { name: 'useAuth', type: 'confirm', message: 'Use authentication?', default: true }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'authProvider', type: 'select', message: 'Auth provider', options: ['local', 'oauth', 'jwt'] }
+      ],
+      when: (values) => values.useAuth === 'true'
+    }
+  ])
+  .shell('config-app --db={{dbType}} --auth={{authProvider}}')
+```
+
+#### Multi-environment Deployment Wizard
+
+```javascript
+action('deploy-wizard')
+  .wizard([
+    {
+      prompts: [
+        { name: 'env', type: 'select', message: 'Environment', options: ['dev', 'staging', 'prod'] }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'branch', type: 'select', message: 'Branch', options: ['main', 'develop', 'release'] }
+      ],
+      when: (values) => ['staging', 'prod'].includes(values.env)
+    },
+    {
+      prompts: [
+        { name: 'runMigrations', type: 'confirm', message: 'Run database migrations?', default: false }
+      ]
+    },
+    {
+      prompts: [
+        { name: 'backupFirst', type: 'confirm', message: 'Create backup before migrations?', default: true }
+      ],
+      when: (values) => values.runMigrations === 'true'
+    }
+  ])
+  .shell('deploy --env={{env}} --branch={{branch}} --migrate={{runMigrations}} --backup={{backupFirst}}')
+```
+
+### Wizards in JSON/YAML
+
+Wizards can be defined in configuration files with some limitations (no JavaScript functions for `when` conditions):
+
+```json
+{
+  "items": [
+    {
+      "key": "n",
+      "label": "New Project",
+      "wizard": [
+        {
+          "prompts": [
+            { "name": "name", "message": "Project name" }
+          ]
+        },
+        {
+          "prompts": [
+            { "name": "type", "type": "select", "message": "Type", "options": ["web", "cli"] }
+          ]
+        }
+      ],
+      "shell": "create-project {{name}} --type {{type}}"
+    }
+  ]
+}
+```
+
+For conditional steps with `when` functions, use JavaScript config files.
+
+### When to Use Wizards vs. Multiple Prompts
+
+**Use `wizard()`** when:
+- You need conditional steps based on previous answers
+- Steps need to be organized into logical groups
+- User needs visual separation between different stages
+- Workflow has branches (different paths based on choices)
+
+**Use multiple `prompt()` calls** when:
+- All prompts should always be shown
+- Simple linear input collection
+- No conditional logic needed
+
+```javascript
+// Simple prompts - all questions always shown
+action('deploy')
+  .prompt('env', 'Environment')
+  .prompt('version', 'Version')
+  .shell('deploy {{env}} {{version}}')
+
+// Wizard - conditional questions
+action('deploy')
+  .wizard([
+    { prompts: [{ name: 'env', message: 'Environment' }] },
+    { 
+      prompts: [{ name: 'confirm', type: 'confirm', message: 'Deploy to production?' }],
+      when: (values) => values.env === 'prod'
+    }
+  ])
+  .shell('deploy {{env}}')
+```
+
 ## Command Chaining
 
 Chain multiple commands to execute sequentially with automatic error handling. Commands execute based on the exit code of the previous command.

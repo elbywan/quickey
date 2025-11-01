@@ -7,7 +7,8 @@ import {
     type ShellOptions,
     type PromptDefinition,
     promptUserMultiple,
-    replacePromptPlaceholders
+    replacePromptPlaceholders,
+    type PromptResult
 } from '../tools/index.js'
 import { state } from '../state/index.js'
 
@@ -38,10 +39,16 @@ export interface Hook {
     options?: ShellOptions
 }
 
+export interface WizardStep {
+    prompts: PromptDefinition[]
+    when?: (values: PromptResult) => boolean  // Conditional execution
+}
+
 export class Action extends Item {
     _shellOptions: ShellOptions = {}
     _code?: () => any
     _prompts: PromptDefinition[] = []
+    _wizardSteps: WizardStep[] = []
     _confirmMessage?: string
     _confirmDefault: boolean = false
     _chains: ChainLink[] = []
@@ -62,7 +69,32 @@ export class Action extends Item {
 
             // Handle prompts if defined
             let promptValues: Record<string, string> = {}
-            if (this._prompts.length > 0 && (command || this._workingDir)) {
+            
+            // Handle wizard steps
+            if (this._wizardSteps.length > 0 && (command || this._workingDir)) {
+                const { printer } = state
+                printer.line('', false)
+
+                for (const step of this._wizardSteps) {
+                    // Check if step should be executed
+                    if (step.when && !step.when(promptValues)) {
+                        continue
+                    }
+
+                    // Execute step prompts
+                    const stepValues = await promptUserMultiple(step.prompts)
+                    
+                    // Merge step values into overall prompt values
+                    promptValues = { ...promptValues, ...stepValues }
+                }
+
+                if (command) {
+                    command = replacePromptPlaceholders(command, promptValues)
+                }
+
+                printer.line('', false)
+            } else if (this._prompts.length > 0 && (command || this._workingDir)) {
+                // Handle regular prompts
                 const { printer } = state
                 printer.line('', false)
 
@@ -350,6 +382,59 @@ export class Action extends Item {
      */
     prompts(prompts: PromptDefinition[]): this {
         this._prompts.push(...prompts)
+        return this
+    }
+
+    /**
+     * Create a multi-step wizard with conditional prompts
+     *
+     * @param steps - Array of wizard steps, each with prompts and optional when condition
+     *
+     * @example
+     * // Basic multi-step wizard
+     * action.wizard([
+     *   {
+     *     prompts: [{ name: 'projectType', type: 'select', message: 'Project type', options: ['web', 'cli'] }]
+     *   },
+     *   {
+     *     prompts: [{ name: 'framework', type: 'select', message: 'Framework', options: ['react', 'vue', 'angular'] }],
+     *     when: (values) => values.projectType === 'web'
+     *   },
+     *   {
+     *     prompts: [{ name: 'name', message: 'Project name' }]
+     *   }
+     * ]).shell('create-project --type {{projectType}} --framework {{framework}} --name {{name}}')
+     *
+     * @example
+     * // Wizard with multiple prompts per step
+     * action.wizard([
+     *   {
+     *     prompts: [
+     *       { name: 'deployEnv', type: 'select', message: 'Environment', options: ['dev', 'staging', 'prod'] }
+     *     ]
+     *   },
+     *   {
+     *     prompts: [
+     *       { name: 'confirm', type: 'confirm', message: 'This will deploy to PRODUCTION. Continue?', default: false }
+     *     ],
+     *     when: (values) => values.deployEnv === 'prod'
+     *   },
+     *   {
+     *     prompts: [
+     *       { name: 'version', message: 'Version to deploy' },
+     *       { name: 'message', message: 'Deployment message' }
+     *     ]
+     *   }
+     * ]).javascript(function() {
+     *   if (this.values.deployEnv === 'prod' && this.values.confirm !== 'true') {
+     *     console.log('Production deployment cancelled')
+     *     return
+     *   }
+     *   // Proceed with deployment
+     * })
+     */
+    wizard(steps: WizardStep[]): this {
+        this._wizardSteps = steps
         return this
     }
 
