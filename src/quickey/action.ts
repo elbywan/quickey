@@ -19,6 +19,13 @@ export interface ChainLink {
     onError?: boolean  // If true, only run if previous command failed
 }
 
+export interface Hook {
+    type: 'shell' | 'javascript'
+    shell?: string
+    code?: ((exitCode?: number) => any)
+    options?: ShellOptions
+}
+
 export class Action extends Item {
     _shellOptions: ShellOptions = {}
     _code?: () => any
@@ -27,6 +34,8 @@ export class Action extends Item {
     _confirmDefault: boolean = false
     _chains: ChainLink[] = []
     _envVars: Record<string, string> = {}
+    _beforeHooks: Hook[] = []
+    _afterHooks: Hook[] = []
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -76,11 +85,23 @@ export class Action extends Item {
             // Merge shell options with env options
             const finalOptions = mix(this._shellOptions, envOptions)
 
+            // Execute before hooks
+            if (this._beforeHooks.length > 0) {
+                for (const hook of this._beforeHooks) {
+                    if (hook.type === 'shell' && hook.shell) {
+                        const hookOptions = mix(hook.options || {}, envOptions)
+                        runCommand(this._label, hook.shell, hookOptions)
+                    } else if (hook.type === 'javascript' && hook.code) {
+                        runJavascript(this._label, hook.code)
+                    }
+                }
+            }
+
             // Execute primary command
             if (command) {
                 if (this._shellOptions.async) {
                     runCommandAsync(this._label, command, finalOptions)
-                    // Async commands don't support chaining
+                    // Async commands don't support chaining or after hooks
                     return
                 } else {
                     runCommand(this._label, command, finalOptions)
@@ -104,6 +125,19 @@ export class Action extends Item {
                         runCommand(this._label, chain.shell, chainOptions)
                     } else if (chain.type === 'javascript' && chain.code) {
                         runJavascript(this._label, chain.code)
+                    }
+                }
+            }
+
+            // Execute after hooks (with final exit code)
+            if (this._afterHooks.length > 0) {
+                const finalExitCode = state.lastCode ?? 0
+                for (const hook of this._afterHooks) {
+                    if (hook.type === 'shell' && hook.shell) {
+                        const hookOptions = mix(hook.options || {}, envOptions)
+                        runCommand(this._label, hook.shell, hookOptions)
+                    } else if (hook.type === 'javascript' && hook.code) {
+                        runJavascript(this._label, () => hook.code!(finalExitCode))
                     }
                 }
             }
@@ -354,6 +388,98 @@ export class Action extends Item {
             this._envVars[keyOrVars] = value
         } else {
             this._envVars = { ...this._envVars, ...keyOrVars }
+        }
+        return this
+    }
+
+    /**
+     * Add a hook to execute before the main command
+     *
+     * @param commandOrCode - Shell command string or JavaScript function
+     * @param options - Optional shell options (only for shell commands)
+     *
+     * @example
+     * // Run setup before main command
+     * action
+     *   .before('mkdir -p logs')
+     *   .shell('node app.js > logs/output.log')
+     *
+     * // Multiple before hooks
+     * action
+     *   .before('echo "Starting..."')
+     *   .before('npm run pre-check')
+     *   .shell('npm run build')
+     *
+     * // Use JavaScript for setup
+     * action
+     *   .before(() => console.log('Preparing environment...'))
+     *   .shell('npm test')
+     *
+     * // Mix shell and JavaScript hooks
+     * action
+     *   .before('git fetch')
+     *   .before(() => console.log('Fetched latest changes'))
+     *   .shell('git merge origin/main')
+     */
+    before(commandOrCode: string | (() => any), options?: ShellOptions): this {
+        if (typeof commandOrCode === 'string') {
+            this._beforeHooks.push({ type: 'shell', shell: commandOrCode, options })
+        } else {
+            this._beforeHooks.push({ type: 'javascript', code: commandOrCode })
+        }
+        return this
+    }
+
+    /**
+     * Add a hook to execute after the main command and all chains complete
+     * The hook receives the final exit code as a parameter (for JavaScript hooks)
+     *
+     * @param commandOrCode - Shell command string or JavaScript function that receives exit code
+     * @param options - Optional shell options (only for shell commands)
+     *
+     * @example
+     * // Run cleanup after main command
+     * action
+     *   .shell('npm run build')
+     *   .after('rm -rf temp/')
+     *
+     * // Multiple after hooks
+     * action
+     *   .shell('npm test')
+     *   .after('npm run coverage')
+     *   .after('echo "Tests complete"')
+     *
+     * // Use exit code in JavaScript hook
+     * action
+     *   .shell('npm run deploy')
+     *   .after((exitCode) => {
+     *     if (exitCode === 0) {
+     *       console.log('Deployment successful!')
+     *     } else {
+     *       console.error('Deployment failed with code:', exitCode)
+     *     }
+     *   })
+     *
+     * // Mix shell and JavaScript hooks
+     * action
+     *   .shell('npm run build')
+     *   .after('npm run minify')
+     *   .after((code) => console.log('Build finished with code:', code))
+     *
+     * // Use with command chains
+     * action
+     *   .shell('npm run build')
+     *   .then('npm test')
+     *   .then('npm run deploy')
+     *   .after((exitCode) => {
+     *     console.log('Full pipeline completed with code:', exitCode)
+     *   })
+     */
+    after(commandOrCode: string | ((exitCode?: number) => any), options?: ShellOptions): this {
+        if (typeof commandOrCode === 'string') {
+            this._afterHooks.push({ type: 'shell', shell: commandOrCode, options })
+        } else {
+            this._afterHooks.push({ type: 'javascript', code: commandOrCode })
         }
         return this
     }

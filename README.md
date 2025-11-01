@@ -696,6 +696,156 @@ action('release')
 - Env vars are only available to shell commands, not JavaScript actions
 - The original `process.env` remains unchanged
 
+## Lifecycle Hooks
+
+Execute code before or after your main commands using lifecycle hooks. This is useful for setup, cleanup, logging, and verification tasks.
+
+### Before Hooks
+
+Run commands before the main action executes:
+
+```javascript
+export default function(q) {
+  // Setup before build
+  q.action('Build')
+    .before('mkdir -p dist')
+    .before('rm -rf dist/*')
+    .shell('npm run build')
+
+  // Fetch before deployment
+  q.action('Deploy')
+    .before('git fetch')
+    .before(() => console.log('Deploying...'))
+    .shell('kubectl apply -f deployment.yaml')
+}
+```
+
+### After Hooks
+
+Run commands after the main action and all chains complete:
+
+```javascript
+export default function(q) {
+  // Cleanup after build
+  q.action('Build')
+    .shell('npm run build')
+    .after('npm run minify')
+    .after('echo "Build complete!"')
+
+  // Verify after deployment
+  q.action('Deploy')
+    .shell('kubectl apply -f deployment.yaml')
+    .after('kubectl rollout status deployment')
+    .after((exitCode) => {
+      if (exitCode === 0) {
+        console.log('Deployment successful!')
+      } else {
+        console.error('Deployment failed!')
+      }
+    })
+}
+```
+
+### Hook Execution Order
+
+Hooks execute in this order:
+
+1. **Before hooks** (in order they were added)
+2. **Main command** (shell or javascript)
+3. **Chained commands** (then/onError)
+4. **After hooks** (in order they were added)
+
+```javascript
+export default function(q) {
+  q.action('Full Pipeline')
+    .before('setup1')      // 1. First before hook
+    .before('setup2')      // 2. Second before hook
+    .shell('main-command') // 3. Main command
+    .then('next-command')  // 4. Chained command
+    .after('cleanup1')     // 5. First after hook
+    .after('cleanup2')     // 6. Second after hook
+}
+```
+
+### Hooks with JavaScript
+
+Both shell commands and JavaScript functions are supported:
+
+```javascript
+export default function(q) {
+  q.action('Test with Logs')
+    .before(() => console.log('Starting tests...'))
+    .before('docker-compose up -d')
+    .shell('npm test')
+    .after('docker-compose down')
+    .after((exitCode) => {
+      console.log(`Tests finished with exit code: ${exitCode}`)
+    })
+}
+```
+
+### Common Use Cases
+
+**Build Pipeline:**
+```javascript
+q.action('Build Production')
+  .before('mkdir -p dist')
+  .before('rm -rf dist/*')
+  .shell('npm run build')
+  .then('npm run minify')
+  .after('npm run size-report')
+  .after(() => console.log('Build complete!'))
+```
+
+**Database Migration:**
+```javascript
+q.action('Migrate Database')
+  .before('npm run db:backup')
+  .before(() => console.log('Running migrations...'))
+  .shell('npm run db:migrate')
+  .onError('npm run db:restore')
+  .after((code) => {
+    if (code === 0) {
+      console.log('Migration successful')
+    } else {
+      console.error('Migration failed, restored backup')
+    }
+  })
+```
+
+**Testing with Environment:**
+```javascript
+q.action('Integration Tests')
+  .before('docker-compose up -d')
+  .before('sleep 5')
+  .before(() => console.log('Test environment ready'))
+  .shell('npm run test:integration')
+  .after('docker-compose down')
+  .after('rm -rf .test-data')
+```
+
+**Deployment with Verification:**
+```javascript
+q.action('Deploy to Production')
+  .before('git fetch')
+  .before(() => console.log('Checking requirements...'))
+  .shell('kubectl apply -f deployment.yaml')
+  .then('kubectl rollout status deployment')
+  .after('kubectl get pods')
+  .after((code) => {
+    if (code === 0) console.log('✓ Deployment successful!')
+  })
+```
+
+### Hook Behavior
+
+- **Before hooks** run before prompts, confirmation, and the main command
+- **After hooks** receive the final exit code (for JavaScript hooks)
+- **After hooks** always run, even if the main command or chains fail
+- **Async commands** don't support after hooks (since they run in background)
+- Hooks work with all other features (prompts, env vars, chaining, etc.)
+- Shell hooks support `options` parameter for custom execution settings
+
 ## Search and Filter
 
 Quickly find actions by searching through labels and descriptions. Press `/` to enter search mode, then type to filter commands in real-time.
