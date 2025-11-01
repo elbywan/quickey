@@ -62,6 +62,7 @@ export class Action extends Item {
     _isFavorite: boolean = false
     _parallelTasks: ParallelTask[] = []
     _watchOptions?: WatchOptions
+    _helpText?: string
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -910,6 +911,11 @@ export class Action extends Item {
             this._isFavorite = true
         }
 
+        // Help text (only if not already set)
+        if (templateAction._helpText && !this._helpText) {
+            this._helpText = templateAction._helpText
+        }
+
         return this
     }
 
@@ -985,6 +991,59 @@ export class Action extends Item {
 
     watchFiles(patterns: string[]): this {
         this._watchOptions = { files: patterns }
+        return this
+    }
+
+    /**
+     * Add detailed help/documentation text for this action
+     * This text is displayed when the user requests help (press ? then the action key)
+     *
+     * @param text - Help text (can be multi-line)
+     *
+     * @example
+     * // Simple help text
+     * action('Deploy')
+     *   .help('Deploys the application to production servers')
+     *   .shell('npm run deploy')
+     *
+     * // Multi-line detailed help with template literal
+     * action('Build')
+     *   .help(`
+     *     Builds the application for production.
+     *
+     *     This command:
+     *     - Compiles TypeScript
+     *     - Bundles assets
+     *     - Optimizes for production
+     *     - Outputs to ./dist directory
+     *
+     *     Environment variables:
+     *     - NODE_ENV: Set to 'production'
+     *     - BUILD_TARGET: Target platform (default: 'web')
+     *   `)
+     *   .shell('npm run build')
+     *
+     * // Help for complex action with prompts
+     * action('Create Component')
+     *   .help(`
+     *     Creates a new React component with boilerplate.
+     *
+     *     You'll be prompted for:
+     *     - Component name (e.g., 'MyComponent')
+     *     - Component type (functional or class)
+     *     - Whether to include tests
+     *
+     *     The component will be created in src/components/
+     *     with proper TypeScript types and styling setup.
+     *   `)
+     *   .wizard([
+     *     { prompts: [{ name: 'name', message: 'Component name' }] },
+     *     { prompts: [{ name: 'type', type: 'select', message: 'Type', options: ['functional', 'class'] }] }
+     *   ])
+     *   .shell('generate-component --name {{name}} --type {{type}}')
+     */
+    help(text: string): this {
+        this._helpText = text
         return this
     }
 }

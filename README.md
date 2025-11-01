@@ -737,6 +737,382 @@ action('deploy')
   .shell('deploy {{env}}')
 ```
 
+## Help & Documentation
+
+Add inline help documentation to your actions that users can view on-demand. Help text is displayed full-screen when the user requests it, making it easy to provide detailed guidance, examples, and warnings.
+
+### Basic Help
+
+```javascript
+export default function(q) {
+  // Add simple help text
+  q.action('Deploy')
+    .help('Deploys the application to production')
+    .shell('npm run deploy')
+
+  // Multi-line help with formatting
+  q.action('Build')
+    .help(`
+      Builds the application for production.
+      
+      This will:
+      - Compile TypeScript
+      - Bundle assets
+      - Optimize for production
+      - Generate source maps
+    `)
+    .shell('npm run build')
+}
+```
+
+### Detailed Documentation
+
+Provide comprehensive documentation with examples, warnings, and usage instructions:
+
+```javascript
+export default function(q) {
+  q.action('Database Migration')
+    .help(`
+      Run database migrations
+      
+      This command will apply all pending migrations to the database.
+      Make sure you have backed up your database before running this!
+      
+      USAGE:
+        Select this action and confirm when prompted.
+      
+      EXAMPLES:
+        - Development: Migrations run against local DB
+        - Production: Requires confirmation and creates backup
+      
+      WARNING: This cannot be undone! Always backup first.
+      
+      See docs/migrations.md for more information.
+    `)
+    .select('env', 'Environment', ['dev', 'staging', 'prod'])
+    .requireConfirmation('Run migrations on {{env}}?')
+    .shell('npm run db:migrate')
+}
+```
+
+### Help for Complex Workflows
+
+Document multi-step processes, wizards, and complex configurations:
+
+```javascript
+export default function(q) {
+  // Document a wizard with detailed steps
+  q.action('Setup Development Environment')
+    .help(`
+      Development Environment Setup Wizard
+      
+      This wizard will guide you through:
+      
+      1. Installing dependencies
+         - Node.js packages via npm
+         - System dependencies via package manager
+      
+      2. Database configuration
+         - Creates local PostgreSQL database
+         - Runs initial migrations
+         - Seeds with test data
+      
+      3. Environment configuration
+         - Creates .env file from template
+         - Configures API keys
+         - Sets up local SSL certificates
+      
+      4. Verification
+         - Runs health checks
+         - Validates configuration
+         - Starts development server
+      
+      TIME: Approximately 5-10 minutes
+      REQUIREMENTS: Docker, Node.js 18+, PostgreSQL
+      
+      If you encounter issues, see: docs/setup-troubleshooting.md
+    `)
+    .wizard([
+      { prompts: [{ name: 'skipDeps', type: 'confirm', message: 'Skip dependency installation?' }] },
+      { prompts: [{ name: 'dbName', message: 'Database name' }] },
+      { prompts: [{ name: 'seedData', type: 'confirm', message: 'Seed with test data?' }] }
+    ])
+    .shell('npm run setup')
+
+  // Document deployment process
+  q.action('Production Deploy')
+    .help(`
+      Production Deployment
+      
+      PREREQUISITES:
+        ✓ All tests must pass
+        ✓ Code reviewed and approved
+        ✓ Version tagged in git
+        ✓ Changelog updated
+        ✓ Team notified
+      
+      PROCESS:
+        1. Builds production bundle
+        2. Runs final test suite
+        3. Creates database backup
+        4. Deploys to production servers
+        5. Runs smoke tests
+        6. Monitors for 5 minutes
+      
+      ROLLBACK:
+        If deployment fails, automatic rollback occurs.
+        Manual rollback: npm run deploy:rollback
+      
+      MONITORING:
+        - Logs: https://logs.example.com
+        - Metrics: https://metrics.example.com
+        - Alerts: Sent to #deployments Slack channel
+      
+      EMERGENCY CONTACT: ops@example.com
+    `)
+    .requireConfirmation('Deploy to production? This is a critical operation.')
+    .shell('npm run deploy:production')
+}
+```
+
+### Help with Code Examples
+
+Include code snippets and command examples in your help text:
+
+```javascript
+export default function(q) {
+  q.action('API Testing')
+    .help(`
+      API Testing Guide
+      
+      This runs the full API test suite including:
+      - Unit tests for controllers
+      - Integration tests for endpoints
+      - Authentication/authorization tests
+      - Rate limiting tests
+      
+      RUNNING SPECIFIC TESTS:
+        To run only unit tests:
+          npm run test:api:unit
+        
+        To run a specific test file:
+          npm run test:api -- path/to/test.js
+      
+      ENVIRONMENT VARIABLES:
+        API_URL     - API endpoint (default: http://localhost:3000)
+        TEST_TOKEN  - Auth token for tests (optional)
+        TIMEOUT     - Test timeout in ms (default: 5000)
+      
+      EXAMPLE:
+        API_URL=https://staging.api.com npm run test:api
+      
+      For more information, see:
+        docs/testing/api-tests.md
+    `)
+    .shell('npm run test:api')
+}
+```
+
+### Help for Dangerous Operations
+
+Use help text to warn users about destructive or risky actions:
+
+```javascript
+export default function(q) {
+  q.action('Reset Database')
+    .help(`
+      ⚠️  DESTRUCTIVE OPERATION ⚠️
+      
+      This will PERMANENTLY DELETE all data in the database!
+      
+      WHAT HAPPENS:
+        1. Drops all tables
+        2. Recreates schema from migrations
+        3. Optionally seeds with test data
+      
+      ⚠️  WARNING:
+        - All existing data will be lost
+        - This cannot be undone
+        - Backups are NOT created automatically
+      
+      BEFORE RUNNING:
+        1. Create a manual backup:
+           npm run db:backup
+        
+        2. Verify you're not on production:
+           echo $NODE_ENV
+        
+        3. Inform your team
+      
+      RECOVERY:
+        If you need to restore from backup:
+          npm run db:restore <backup-file>
+      
+      🚨 ONLY USE IN DEVELOPMENT/TESTING 🚨
+    `)
+    .select('env', 'Environment', ['dev', 'test'])
+    .requireConfirmation('Delete ALL data? This cannot be undone!')
+    .shell('npm run db:reset')
+}
+```
+
+### Viewing Help
+
+Users can view help documentation in two ways:
+
+**Method 1: Help Mode (Press `?`)**
+1. Press `?` to enter help mode
+2. The menu shows: "? Help mode: Press an action key to view help"
+3. Press any action key (e.g., `d` for Deploy)
+4. Help text displays full-screen
+5. Press any key to return to menu
+6. Press `ESC` to exit help mode
+
+**Method 2: Direct from Code**
+```javascript
+// Help text is stored in the action._helpText property
+const action = q.getAction('deploy')
+console.log(action._helpText)  // View help programmatically
+```
+
+### Help with Templates
+
+Help text is inherited from templates, making it easy to standardize documentation:
+
+```javascript
+export default function(q) {
+  // Create a template with help
+  q.template('deployment')
+    .help(`
+      Standard Deployment Process
+      
+      All deployments follow this workflow:
+      1. Build for production
+      2. Run test suite
+      3. Deploy to target environment
+      4. Run smoke tests
+      5. Monitor for issues
+    `)
+    .before('npm run build')
+    .then('npm test')
+  
+  // Actions inherit the help text
+  q.action('Deploy Staging')
+    .fromTemplate(q.getTemplate('deployment'))
+    .shell('deploy.sh staging')
+    // Inherits the standard deployment help
+  
+  q.action('Deploy Production')
+    .fromTemplate(q.getTemplate('deployment'))
+    .help(`
+      Production Deployment
+      
+      ${q.getTemplate('deployment')._helpText}
+      
+      ADDITIONAL REQUIREMENTS FOR PRODUCTION:
+      - Approval from 2 team members
+      - All integration tests passing
+      - Database backup confirmed
+    `)
+    .shell('deploy.sh production')
+    // Extends the template help with production-specific info
+}
+```
+
+### When to Use Help Documentation
+
+**Use help text for:**
+- Complex operations that need explanation
+- Multi-step workflows and wizards
+- Dangerous or destructive operations
+- Commands with many options or flags
+- Processes with prerequisites or requirements
+- Actions that need examples or code snippets
+- Operations with monitoring or rollback procedures
+
+**Skip help text for:**
+- Simple, self-explanatory actions (e.g., "npm test")
+- Actions where the label and description are sufficient
+- Trivial operations that don't need documentation
+
+### Best Practices
+
+```javascript
+export default function(q) {
+  // ✓ Good: Clear, structured, helpful
+  q.action('Deploy')
+    .help(`
+      Production Deployment
+      
+      Prerequisites: Tests passing, code reviewed
+      Process: Build → Test → Deploy → Verify
+      Time: ~5 minutes
+      Rollback: npm run deploy:rollback
+    `)
+    .shell('npm run deploy:prod')
+  
+  // ✗ Avoid: Too brief, not helpful
+  q.action('Deploy')
+    .help('Deploys the app')
+    .shell('npm run deploy:prod')
+  
+  // ✗ Avoid: Too verbose, hard to read
+  q.action('Deploy')
+    .help(`
+      This action will deploy your application to the production environment.
+      It starts by building the application bundle using webpack with production
+      configuration. Then it runs the test suite to make sure everything works.
+      After that it uploads the files to the server using rsync. Finally it
+      restarts the application server and checks if it's running correctly.
+      [continues for many more paragraphs...]
+    `)
+    .shell('npm run deploy:prod')
+}
+```
+
+**Structure your help text:**
+- Start with a brief summary (1-2 lines)
+- Use sections with clear headers (PREREQUISITES, PROCESS, etc.)
+- Include warnings prominently (⚠️, 🚨 symbols)
+- Provide examples when helpful
+- Link to detailed documentation when needed
+- Keep it scannable with bullet points and short paragraphs
+
+### Integration with Other Features
+
+Help works seamlessly with all Quickey features:
+
+```javascript
+export default function(q) {
+  // With prompts and confirmations
+  q.action('Migrate')
+    .help('Runs database migrations on selected environment')
+    .select('env', 'Environment', ['dev', 'staging', 'prod'])
+    .requireConfirmation('Run migrations on {{env}}?')
+    .shell('migrate --env={{env}}')
+  
+  // With chaining
+  q.action('Full CI')
+    .help('Complete CI pipeline: lint → test → build → deploy')
+    .shell('npm run lint')
+    .then('npm test')
+    .then('npm run build')
+    .then('npm run deploy')
+  
+  // With conditions
+  q.action('Dev Tools')
+    .help('Opens development tools (only available in dev mode)')
+    .condition(envEquals('NODE_ENV', 'development'))
+    .shell('npm run dev-tools')
+  
+  // With favorites
+  q.action('Quick Deploy')
+    .favorite()
+    .help('Quick deployment to staging (commonly used)')
+    .shell('npm run deploy:staging')
+}
+```
+
 ## Command Chaining
 
 Chain multiple commands to execute sequentially with automatic error handling. Commands execute based on the exit code of the previous command.

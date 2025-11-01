@@ -15,8 +15,15 @@ export function printScreen(keyMap?: Map<string, Item>): void {
     const colors = getColors()
     const { printer } = state
 
+    // Help mode indicator //
+    if (state.helpMode) {
+        printer
+            .line()
+            .line('    ' + c.bold.cyan('? Help mode: ') + c.white('Press an action key to view help'))
+            .line('    ' + c.gray('(ESC to exit)'))
+    }
     // Search mode indicator //
-    if (state.searchMode) {
+    else if (state.searchMode) {
         printer
             .line()
             .line('    ' + c.bold.yellow('🔍 Search mode: ') + c.white(state.searchQuery || '') + c.gray('█'))

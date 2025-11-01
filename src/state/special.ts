@@ -8,9 +8,17 @@ import { runCommand } from '../tools/index.js'
 
 export const specialCommands = [
     {
+        key: '?',
+        text: () => (chalk as any)[getColors().extraComands]('?') + ': help',
+        conditional: () => !state.searchMode && !state.helpMode,
+        action: () => {
+            state.helpMode = true
+        }
+    },
+    {
         key: '/',
         text: () => (chalk as any)[getColors().extraComands]('/') + ': search',
-        conditional: () => !state.searchMode,
+        conditional: () => !state.searchMode && !state.helpMode,
         action: () => {
             state.searchMode = true
             state.searchQuery = ''

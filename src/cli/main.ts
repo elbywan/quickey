@@ -86,8 +86,57 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                 process.exit(0)
             }
             
+            // Handle help mode input
+            if(state.helpMode) {
+                // Check if user pressed escape to exit help mode
+                if(keyEvent.name === 'escape') {
+                    state.helpMode = false
+                    printer.clear()
+                    continue
+                }
+                
+                // Try to find item by key press
+                const helpItem = keyMap.get(keyPress)
+                if(helpItem && (helpItem as any)._helpText) {
+                    // Display help for this item
+                    printer.clear()
+                    printer.line()
+                    printer.line('  ' + chalk.bold.cyan('Help: ' + helpItem._label))
+                    printer.line()
+                    
+                    const helpText = (helpItem as any)._helpText
+                    // Split by lines and display with indentation
+                    helpText.split('\n').forEach((line: string) => {
+                        printer.line('  ' + line, false)
+                    })
+                    
+                    printer.line()
+                    printer.line('  ' + chalk.gray('Press any key to return...'), false)
+                    
+                    // Wait for any key press to return
+                    state.helpMode = false
+                    process.stdin.once('keypress', () => {
+                        printer.clear()
+                    });
+                    (process.stdin as any).setRawMode(true)
+                    yield
+                    continue
+                } else if(helpItem) {
+                    // Item has no help text
+                    state.helpMode = false
+                    printer.line()
+                    printer.line('  ' + chalk.yellow('No help available for: ' + helpItem._label))
+                    printer.line()
+                    continue
+                } else {
+                    // Invalid key press
+                    state.helpMode = false
+                    printer.clear()
+                    continue
+                }
+            }
             // Handle search mode input
-            if(state.searchMode) {
+            else if(state.searchMode) {
                 // Check for special keys first
                 cmdMatch = specialCommands.find((cmd) => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
                 if(cmdMatch && cmdMatch.conditional && cmdMatch.conditional()) {

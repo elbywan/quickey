@@ -37,6 +37,7 @@ export const state: {
     asyncBuffer: CircularStringBuffer;
     searchMode: boolean;
     searchQuery: string;
+    helpMode: boolean;
     commandHistory: HistoryEntry[];
     templates: Map<string, any>;
 } = {
@@ -51,6 +52,7 @@ export const state: {
     asyncBuffer: new CircularStringBuffer(100),
     searchMode: false,
     searchQuery: '',
+    helpMode: false,
     commandHistory: [],
     templates: new Map()
 }
