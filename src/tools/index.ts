@@ -1,6 +1,19 @@
 export * from './runners.js'
 export * from './circularstringbuffer.js'
-export * from './prompt.js'
+export { 
+    promptUser, 
+    promptUserMultiple, 
+    replacePromptPlaceholders,
+    promptText,
+    promptPassword,
+    promptSelect,
+    promptConfirm,
+    type PromptDefinition,
+    type PromptResult,
+    type SelectPromptDefinition,
+    type ConfirmPromptDefinition,
+    type PasswordPromptDefinition
+} from './prompt.js'
 
 export const trim = (str: string | string[], ...params: string[]): string => {
     let fullStr = str instanceof Array ? str[0] : str

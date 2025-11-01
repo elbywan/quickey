@@ -200,6 +200,61 @@ action
 }
 ```
 
+## Command Confirmation
+
+Add a safety confirmation gate before executing potentially dangerous commands. Unlike `confirm()` prompts which capture user input, `requireConfirmation()` acts as a final safety check before command execution.
+
+### Basic Confirmation
+```javascript
+// Require confirmation for destructive operations
+action
+  .requireConfirmation('Are you sure you want to delete all data?')
+  .shell('rm -rf data/')
+
+// With default value (defaults to false)
+action
+  .requireConfirmation('Proceed with deployment?', true)
+  .shell('npm run deploy')
+```
+
+### With User Prompts
+```javascript
+// Confirmation message can use prompt placeholders
+action
+  .prompt('env', 'Environment')
+  .requireConfirmation('Deploy to {{env}}? This cannot be undone!')
+  .shell('deploy --env {{env}}')
+
+action
+  .select('database', 'Select database', ['dev', 'staging', 'prod'])
+  .requireConfirmation('Reset {{database}} database? All data will be lost!')
+  .shell('psql -c "DROP DATABASE {{database}}; CREATE DATABASE {{database}}"')
+```
+
+### Common Use Cases
+```javascript
+// Database operations
+action('reset-db')
+  .requireConfirmation('Reset database? This cannot be undone!')
+  .shell('npm run db:reset')
+
+// Deployment to production
+action('deploy-prod')
+  .requireConfirmation('Deploy to production?', false)
+  .shell('npm run deploy:production')
+
+// Force push to git
+action('force-push')
+  .prompt('branch', 'Branch name')
+  .requireConfirmation('Force push to {{branch}}? This will overwrite remote history!')
+  .shell('git push origin {{branch}} --force')
+
+// File deletion
+action('clean')
+  .requireConfirmation('Delete all build artifacts?', false)
+  .shell('rm -rf dist/ build/ node_modules/')
+```
+
 ## Usage
 
 ```bash

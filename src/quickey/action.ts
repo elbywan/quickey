@@ -15,6 +15,8 @@ export class Action extends Item {
     _shellOptions: ShellOptions = {}
     _code?: () => any
     _prompts: PromptDefinition[] = []
+    _confirmMessage?: string
+    _confirmDefault: boolean = false
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -29,6 +31,22 @@ export class Action extends Item {
                 command = replacePromptPlaceholders(command, values)
 
                 printer.line('', false)
+            }
+
+            // Handle confirmation if defined
+            if (this._confirmMessage) {
+                const { printer } = state
+                const { promptConfirm } = await import('../tools/index.js')
+                
+                printer.line('', false)
+                const confirmed = await promptConfirm(this._confirmMessage, this._confirmDefault)
+                printer.line('', false)
+
+                if (confirmed !== 'true') {
+                    printer.line('Operation cancelled.', false)
+                    printer.line('', false)
+                    return
+                }
             }
 
             if (command) {
@@ -150,6 +168,29 @@ export class Action extends Item {
      */
     prompts(prompts: PromptDefinition[]): this {
         this._prompts.push(...prompts)
+        return this
+    }
+
+    /**
+     * Require confirmation before executing the command
+     *
+     * @param message - Confirmation message to display
+     * @param defaultValue - Default value if user presses enter (default: false)
+     *
+     * @example
+     * // Require confirmation for destructive operations
+     * action
+     *   .requireConfirmation('Are you sure you want to delete all data?')
+     *   .shell('rm -rf data/')
+     *
+     * // With default value
+     * action
+     *   .requireConfirmation('Proceed with deployment?', true)
+     *   .shell('npm run deploy')
+     */
+    requireConfirmation(message: string, defaultValue: boolean = false): this {
+        this._confirmMessage = message
+        this._confirmDefault = defaultValue
         return this
     }
 }
