@@ -19,6 +19,13 @@ export interface ChainLink {
     onError?: boolean  // If true, only run if previous command failed
 }
 
+export interface ParallelTask {
+    type: 'shell' | 'javascript'
+    shell?: string
+    code?: () => any
+    options?: ShellOptions
+}
+
 export interface Hook {
     type: 'shell' | 'javascript'
     shell?: string
@@ -41,6 +48,7 @@ export class Action extends Item {
     _silentOutput: boolean = false
     _notifyMessage?: string
     _isFavorite: boolean = false
+    _parallelTasks: ParallelTask[] = []
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -116,6 +124,28 @@ export class Action extends Item {
                         runJavascript(this._label, hook.code)
                     }
                 }
+            }
+
+            // Execute parallel tasks if defined
+            if (this._parallelTasks.length > 0) {
+                const { runParallel } = await import('../tools/index.js')
+                await runParallel(this._label, this._parallelTasks, mix(finalOptions, envOptions))
+                // Parallel execution doesn't support chaining or after hooks
+                
+                // Show notification message if defined
+                if (this._notifyMessage) {
+                    const { printer } = state
+                    const processedMessage = replacePromptPlaceholders(this._notifyMessage, promptValues)
+                    printer.line('', false)
+                    printer.line(`✓ ${processedMessage}`, false)
+                    printer.line('', false)
+                }
+                
+                // Restore original working directory if it was changed
+                if (originalCwd !== undefined) {
+                    state.current._cwd = originalCwd
+                }
+                return
             }
 
             // Execute primary command
@@ -797,6 +827,51 @@ export class Action extends Item {
      */
     favorite(): this {
         this._isFavorite = true
+        return this
+    }
+
+    /**
+     * Run multiple commands concurrently (in parallel)
+     * Waits for all commands to complete before returning
+     * If any command fails, the overall execution is marked as failed
+     *
+     * @param tasks - Array of commands (strings) or functions to run in parallel
+     *
+     * @example
+     * // Run multiple build tasks in parallel
+     * action('Build All')
+     *   .parallel([
+     *     'npm run build:client',
+     *     'npm run build:server',
+     *     'npm run build:shared'
+     *   ])
+     *
+     * // Mix shell commands and JavaScript
+     * action('Parallel Tasks')
+     *   .parallel([
+     *     'npm run lint',
+     *     'npm run test',
+     *     () => console.log('Running custom task')
+     *   ])
+     *
+     * // With notification
+     * action('Deploy All')
+     *   .parallel([
+     *     'deploy-frontend.sh',
+     *     'deploy-backend.sh',
+     *     'deploy-workers.sh'
+     *   ])
+     *   .notify('All services deployed!')
+     */
+    parallel(tasks: (string | (() => any))[]): this {
+        // Convert tasks to ParallelTask format
+        this._parallelTasks = tasks.map(task => {
+            if (typeof task === 'string') {
+                return { type: 'shell' as const, shell: task }
+            } else {
+                return { type: 'javascript' as const, code: task }
+            }
+        })
         return this
     }
 }

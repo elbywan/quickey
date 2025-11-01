@@ -5,6 +5,7 @@ import { CircularStringBuffer } from './circularstringbuffer.js'
 import { refreshScreen, printCommandResult } from '../printer/index.js'
 import { state, pop, addAsync, removeAsync, addToHistory } from '../state/index.js'
 import { specialCommands } from '../state/special.js'
+import { mix } from './index.js'
 
 export interface ShellOptions extends ExecSyncOptions {
     async?: boolean;
@@ -148,4 +149,88 @@ export function runJavascript(label: string, code: () => any): void {
     
     // Add to history
     addToHistory(label, label, 'javascript', exitCode)
+}
+
+export interface ParallelTask {
+    type: 'shell' | 'javascript'
+    shell?: string
+    code?: () => any
+    options?: ShellOptions
+}
+
+export async function runParallel(label: string, tasks: ParallelTask[], baseOptions: ShellOptions = {}): Promise<void> {
+    const { printer, current } = state
+
+    printer.line(`> ${label} (parallel execution)`, false)
+    printer.line('', false)
+
+    const taskPromises = tasks.map(async (task, index) => {
+        const taskLabel = `${label}[${index}]`
+        
+        if (task.type === 'shell' && task.shell) {
+            return new Promise<{ label: string; code: number | undefined; signal: string | undefined }>((resolve) => {
+                const taskOptions = mix(baseOptions, task.options || {})
+                
+                const subprocess = spawn(task.shell!, [], {
+                    cwd: current._cwd,
+                    shell: true,
+                    stdio: taskOptions.silent ? 'ignore' : 'inherit',
+                    ...taskOptions
+                })
+
+                subprocess.on('close', (code, signal) => {
+                    resolve({ label: taskLabel, code: code ?? undefined, signal: signal ?? undefined })
+                })
+
+                subprocess.on('error', (error) => {
+                    printer.line(
+                        chalk.bgBlack.bold.red(`<!> Task ${index} failed: ${error.toString()}`),
+                        false
+                    )
+                    resolve({ label: taskLabel, code: 1, signal: undefined })
+                })
+            })
+        } else if (task.type === 'javascript' && task.code) {
+            return new Promise<{ label: string; code: number | undefined; signal: string | undefined }>((resolve) => {
+                try {
+                    task.code!()
+                    resolve({ label: taskLabel, code: 0, signal: undefined })
+                } catch (error) {
+                    const message = error instanceof Error ? error.message : String(error)
+                    printer.line(
+                        chalk.bgBlack.bold.red(`<!> Task ${index} failed: ${message}`),
+                        false
+                    )
+                    resolve({ label: taskLabel, code: 1, signal: undefined })
+                }
+            })
+        }
+        
+        return Promise.resolve({ label: taskLabel, code: 0, signal: undefined })
+    })
+
+    const results = await Promise.all(taskPromises)
+    
+    printer.line('', false)
+    printer.line(chalk.bold('Parallel execution results:'), false)
+    
+    let allSucceeded = true
+    results.forEach((result, index) => {
+        const status = result.code === 0 
+            ? chalk.green('✓ Success')
+            : chalk.red(`✗ Failed (code: ${result.code})`)
+        printer.line(`  Task ${index}: ${status}`, false)
+        if (result.code !== 0) {
+            allSucceeded = false
+        }
+    })
+    
+    printer.line('', false)
+    
+    const finalCode = allSucceeded ? 0 : 1
+    state.lastCode = finalCode
+    printCommandResult(label, finalCode)
+    
+    // Add to history
+    addToHistory(label, `${tasks.length} parallel tasks`, 'shell', finalCode)
 }

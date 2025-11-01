@@ -1303,6 +1303,286 @@ q.action('Run Benchmarks')
 - Favorites within categories help organize related frequent tasks
 - The ★ marker makes it easy to visually identify your key commands
 
+## Parallel Execution
+
+Run multiple commands concurrently to speed up build processes, deployments, and other tasks. Parallel execution waits for all commands to complete and reports the overall status.
+
+### Basic Usage
+
+```javascript
+export default function(q) {
+  // Run multiple build tasks in parallel
+  q.action('Build All')
+    .parallel([
+      'npm run build:client',
+      'npm run build:server',
+      'npm run build:shared'
+    ])
+}
+```
+
+### Mixed Command Types
+
+You can mix shell commands and JavaScript functions in parallel execution:
+
+```javascript
+export default function(q) {
+  q.action('Quality Checks')
+    .parallel([
+      'npm run lint',
+      'npm run type-check',
+      () => console.log('Running custom validation...'),
+      'npm run format:check'
+    ])
+}
+```
+
+### With Notifications
+
+Show a message after all parallel tasks complete:
+
+```javascript
+export default function(q) {
+  q.action('Deploy All Services')
+    .parallel([
+      './deploy-frontend.sh',
+      './deploy-backend.sh',
+      './deploy-workers.sh',
+      './deploy-api.sh'
+    ])
+    .notify('All services deployed successfully!')
+}
+```
+
+### With Confirmation
+
+Add a confirmation step before running parallel tasks:
+
+```javascript
+export default function(q) {
+  q.action('Deploy Production')
+    .requireConfirmation('Deploy all services to production?')
+    .parallel([
+      './deploy-frontend.sh production',
+      './deploy-backend.sh production',
+      './deploy-workers.sh production'
+    ])
+    .notify('Production deployment complete!')
+}
+```
+
+### With Environment Variables
+
+Set environment variables for all parallel tasks:
+
+```javascript
+export default function(q) {
+  q.action('Build Production')
+    .env('NODE_ENV', 'production')
+    .env('OPTIMIZE', 'true')
+    .parallel([
+      'npm run build:client',
+      'npm run build:server',
+      'npm run build:mobile'
+    ])
+}
+```
+
+### With Before Hooks
+
+Run setup tasks before parallel execution:
+
+```javascript
+export default function(q) {
+  q.action('Test All')
+    .before('npm install')
+    .before('npm run build')
+    .env('NODE_ENV', 'test')
+    .parallel([
+      'npm run test:unit',
+      'npm run test:integration',
+      'npm run test:e2e'
+    ])
+    .notify('All tests completed!')
+}
+```
+
+### With Prompts
+
+Use dynamic values from prompts in parallel tasks:
+
+```javascript
+export default function(q) {
+  q.action('Deploy to Environment')
+    .select('env', 'Environment', ['dev', 'staging', 'prod'])
+    .requireConfirmation('Deploy all services to {{env}}?')
+    .parallel([
+      './deploy-frontend.sh {{env}}',
+      './deploy-backend.sh {{env}}',
+      './deploy-workers.sh {{env}}'
+    ])
+    .notify('Deployed to {{env}}!')
+}
+```
+
+### With Working Directory
+
+Run parallel tasks in a specific directory:
+
+```javascript
+export default function(q) {
+  q.action('Build Microservices')
+    .in('./services')
+    .parallel([
+      'cd auth && npm run build',
+      'cd users && npm run build',
+      'cd payments && npm run build',
+      'cd notifications && npm run build'
+    ])
+}
+```
+
+### Use Cases
+
+**Build Pipeline:**
+```javascript
+// Build multiple packages simultaneously
+q.action('Build Monorepo')
+  .parallel([
+    'npm run build --workspace=packages/ui',
+    'npm run build --workspace=packages/api',
+    'npm run build --workspace=packages/shared',
+    'npm run build --workspace=packages/utils'
+  ])
+  .notify('Monorepo build complete!')
+```
+
+**Testing Pipeline:**
+```javascript
+// Run different test suites in parallel
+q.action('Run All Tests')
+  .env('NODE_ENV', 'test')
+  .before('npm run build')
+  .parallel([
+    'npm run test:unit -- --coverage',
+    'npm run test:integration',
+    'npm run test:e2e',
+    'npm run test:performance'
+  ])
+```
+
+**Deployment Pipeline:**
+```javascript
+// Deploy multiple services simultaneously
+q.action('Deploy All')
+  .prompt('version', 'Version tag')
+  .requireConfirmation('Deploy version {{version}} to all services?')
+  .parallel([
+    'docker build -t frontend:{{version}} ./frontend && docker push frontend:{{version}}',
+    'docker build -t backend:{{version}} ./backend && docker push backend:{{version}}',
+    'docker build -t workers:{{version}} ./workers && docker push workers:{{version}}'
+  ])
+  .notify('Version {{version}} deployed!')
+```
+
+**Code Quality Checks:**
+```javascript
+// Run linting, formatting, and type checks concurrently
+q.action('Quality Check')
+  .parallel([
+    'npm run lint',
+    'npm run format:check',
+    'npm run type-check',
+    'npm run audit'
+  ])
+```
+
+**Cleanup Tasks:**
+```javascript
+// Clean multiple directories in parallel
+q.action('Clean All')
+  .requireConfirmation('Remove all build artifacts and caches?')
+  .parallel([
+    'rm -rf dist',
+    'rm -rf node_modules/.cache',
+    'rm -rf .next',
+    'rm -rf coverage',
+    'rm -rf .turbo'
+  ])
+  .notify('Cleanup complete!')
+```
+
+**Database Operations:**
+```javascript
+// Run migrations on multiple databases
+q.action('Migrate All Databases')
+  .env('NODE_ENV', 'development')
+  .parallel([
+    'npm run migrate:users',
+    'npm run migrate:products',
+    'npm run migrate:orders',
+    'npm run migrate:analytics'
+  ])
+```
+
+**Asset Processing:**
+```javascript
+// Process different asset types simultaneously
+q.action('Process Assets')
+  .parallel([
+    'npm run optimize:images',
+    'npm run optimize:videos',
+    'npm run compile:sass',
+    'npm run bundle:js'
+  ])
+  .notify('All assets processed!')
+```
+
+### How It Works
+
+- **Concurrent Execution**: All tasks run simultaneously, not sequentially
+- **Wait for Completion**: The action waits for all tasks to finish before continuing
+- **Exit Status**: If any task fails, the overall execution is marked as failed
+- **Output**: Each task's output is displayed as it runs (unless `silent()` is used)
+- **Results Summary**: After completion, a summary shows the status of each task
+- **No Chaining**: Parallel execution doesn't support `.then()` chaining (use before/after hooks instead)
+- **Environment Sharing**: All tasks share the same environment variables and working directory
+
+### Execution Results
+
+When parallel tasks complete, you'll see a summary:
+
+```
+> Build All (parallel execution)
+
+[Task outputs appear here as they run...]
+
+Parallel execution results:
+  Task 0: ✓ Success
+  Task 1: ✓ Success
+  Task 2: ✗ Failed (code: 1)
+  Task 3: ✓ Success
+
+✓ Build All completed with exit code 1
+```
+
+### Limitations
+
+- **No Chaining**: Cannot use `.then()` or `.onError()` after parallel execution
+- **No Capture**: Cannot use `.capture()` to capture output from parallel tasks
+- **After Hooks**: After hooks are not executed for parallel tasks
+- **Async Not Supported**: Cannot combine with `.shellOptions({ async: true })`
+
+### Tips
+
+- Use parallel execution when tasks are independent and don't depend on each other
+- Parallel builds can significantly reduce CI/CD pipeline times
+- Be cautious with resource-intensive tasks - too many parallel tasks can overwhelm the system
+- For dependent tasks, use `.then()` chaining instead
+- Combine with `.silent()` to reduce output noise when running many tasks
+- Use `.before()` hooks to ensure dependencies are installed before parallel execution
+- Add `.requireConfirmation()` for destructive parallel operations
+
 ## Command History
 
 Quickey automatically tracks all executed commands and allows you to quickly re-run them from a history menu.
