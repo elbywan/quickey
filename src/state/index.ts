@@ -26,6 +26,8 @@ export const state: {
     lastErrorMessage?: string;
     asyncRunning: Map<ChildProcess, { label: string; command: string }>;
     asyncBuffer: CircularStringBuffer;
+    searchMode: boolean;
+    searchQuery: string;
 } = {
     parents: [],
     current: null as any,
@@ -34,7 +36,9 @@ export const state: {
     lastCode: 0,
     lastErrorMessage: '',
     asyncRunning: new Map(),
-    asyncBuffer: new CircularStringBuffer(100)
+    asyncBuffer: new CircularStringBuffer(100),
+    searchMode: false,
+    searchQuery: ''
 }
 
 export function getColors() {

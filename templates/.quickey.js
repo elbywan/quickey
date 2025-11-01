@@ -1,4 +1,6 @@
 export default quickey => {
+    // TIP: Press '/' to search for commands by label or description!
+    
     // A simple shell command
     quickey
         .action('Hello')

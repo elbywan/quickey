@@ -696,6 +696,145 @@ action('release')
 - Env vars are only available to shell commands, not JavaScript actions
 - The original `process.env` remains unchanged
 
+## Search and Filter
+
+Quickly find actions by searching through labels and descriptions. Press `/` to enter search mode, then type to filter commands in real-time.
+
+### Basic Search
+
+```javascript
+// When you have many actions, use search to find them quickly
+export default function(q) {
+  // Imagine you have 50+ actions...
+  q.action('Build Frontend').description('Build React application')
+  q.action('Build Backend').description('Build Node.js API')
+  q.action('Build Docker').description('Build Docker images')
+  q.action('Test Frontend').description('Run React tests')
+  q.action('Test Backend').description('Run API tests')
+  q.action('Deploy Production').description('Deploy to production')
+  q.action('Deploy Staging').description('Deploy to staging')
+  // ... many more actions
+}
+
+// Press '/' and type 'docker' to show only Docker-related actions
+// Press '/' and type 'frontend' to show only frontend actions
+// Press 'ESC' to exit search mode
+```
+
+### Search Behavior
+
+**Entering Search Mode:**
+- Press `/` to activate search mode
+- A search prompt appears at the top of the screen
+- The menu updates in real-time as you type
+
+**Searching:**
+- Search matches against both action labels and descriptions
+- Matching is case-insensitive
+- Partial matches are supported (e.g., "doc" matches "Docker", "Documentation")
+- Multiple words in labels/descriptions are all searchable
+
+**Executing Actions:**
+- Press `Enter` to execute the first matching action
+- Press the action's key to execute that specific action
+- Press `ESC` to exit search mode without executing
+
+**During Search Mode:**
+- Type any character to add it to your search query
+- Press `Backspace` to remove the last character
+- Regular command keys (spacebar, return for logs, etc.) are disabled
+- Only matching actions are displayed in the menu
+
+### Search Examples
+
+```javascript
+// Example: Large project with many scripts
+export default function(q) {
+  // Database commands
+  q.action('DB Migrate').description('Run database migrations')
+  q.action('DB Seed').description('Seed database with test data')
+  q.action('DB Reset').description('Reset database')
+  q.action('DB Backup').description('Backup production database')
+  
+  // Build commands
+  q.action('Build Prod').description('Production build')
+  q.action('Build Dev').description('Development build')
+  q.action('Build Docs').description('Build documentation site')
+  
+  // Test commands
+  q.action('Test Unit').description('Run unit tests')
+  q.action('Test Integration').description('Run integration tests')
+  q.action('Test E2E').description('Run end-to-end tests')
+  
+  // Deploy commands
+  q.action('Deploy AWS').description('Deploy to AWS')
+  q.action('Deploy Azure').description('Deploy to Azure')
+  q.action('Deploy GCP').description('Deploy to Google Cloud')
+}
+
+// Usage:
+// '/' then 'db' → Shows only database commands
+// '/' then 'test' → Shows only test commands
+// '/' then 'prod' → Shows "Build Prod" and "DB Backup" (matches description)
+// '/' then 'aws' → Shows "Deploy AWS"
+```
+
+### Search with Categories
+
+Search works across all actions in the current category:
+
+```javascript
+export default function(q) {
+  q.category('Docker').content(q => {
+    q.action('Build Image').description('Build Docker image')
+    q.action('Push Image').description('Push to registry')
+    q.action('Run Container').description('Run Docker container')
+    q.action('Stop Container').description('Stop running container')
+    q.action('View Logs').description('View container logs')
+    q.action('Clean Images').description('Remove unused images')
+  })
+}
+
+// Inside the "Docker" category:
+// '/' then 'container' → Shows "Run Container" and "Stop Container"
+// '/' then 'image' → Shows "Build Image", "Push Image", "Clean Images"
+```
+
+### Tips for Searchable Actions
+
+**Good action naming for searchability:**
+
+```javascript
+// ✓ Good - descriptive labels and descriptions
+q.action('Test E2E').description('Run end-to-end tests with Playwright')
+q.action('Deploy Prod').description('Deploy to production environment')
+q.action('DB Migrate').description('Run database schema migrations')
+
+// ✗ Less searchable - vague or missing descriptions
+q.action('Test').description('Tests')
+q.action('Deploy')
+q.action('Migrate').description('Do migration')
+```
+
+**Include relevant keywords in descriptions:**
+
+```javascript
+// Searching for 'docker', 'container', or 'kubernetes' will all match this
+q.action('Build').description('Build Docker container for Kubernetes deployment')
+
+// Searching for 'api', 'server', or 'backend' will match
+q.action('Start').description('Start API server for backend development')
+```
+
+### How Search Works
+
+- Search filters items based on query matching label or description
+- Filtering happens in real-time as you type
+- Conditional items (with `condition()`) are still filtered by conditions first
+- Search query is case-insensitive and matches partial strings
+- Whitespace is automatically trimmed from search queries
+- Empty search shows all available actions
+
 ## Usage
 
 ```bash

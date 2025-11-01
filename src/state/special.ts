@@ -8,14 +8,33 @@ import { runCommand } from '../tools/index.js'
 
 export const specialCommands = [
     {
+        key: '/',
+        text: () => (chalk as any)[getColors().extraComands]('/') + ': search',
+        conditional: () => !state.searchMode,
+        action: () => {
+            state.searchMode = true
+            state.searchQuery = ''
+        }
+    },
+    {
+        key: 'escape',
+        text: () => (chalk as any)[getColors().extraComands]('ESC') + ': exit search',
+        conditional: () => state.searchMode,
+        action: () => {
+            state.searchMode = false
+            state.searchQuery = ''
+        }
+    },
+    {
         key: 'backspace',
         text: () => (chalk as any)[getColors().extraComands]('backspace') + ': close category',
-        conditional: () => state.parents.length > 0,
+        conditional: () => state.parents.length > 0 && !state.searchMode,
         action: pop
     },
     {
         key: 'space',
         text: () => (chalk as any)[getColors().extraComands]('spacebar') + ': launch shell',
+        conditional: () => !state.searchMode,
         action: () => {
             const options: { shell?: string } = {}
             if (state.current._options.useCurrentShell) {
@@ -34,6 +53,7 @@ export const specialCommands = [
                     ': show running background processes'
             )
         },
+        conditional: () => !state.searchMode,
         action: () => {
             const showLogsCommand = state.asyncRunning.size < 1 || state.current._id === 'background-processes'
             if (showLogsCommand) {

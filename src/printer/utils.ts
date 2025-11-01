@@ -9,11 +9,19 @@ export function printScreen(keyMap?: Map<string, Item>): void {
     const c = chalk as any
 
     if (!keyMap) {
-        keyMap = state.current._getKeyMap()
+        keyMap = state.current._getKeyMap(state.searchMode ? state.searchQuery : undefined)
     }
 
     const colors = getColors()
     const { printer } = state
+
+    // Search mode indicator //
+    if (state.searchMode) {
+        printer
+            .line()
+            .line('    ' + c.bold.yellow('🔍 Search mode: ') + c.white(state.searchQuery || '') + c.gray('█'))
+            .line('    ' + c.gray('(Type to search, ESC to exit, Enter to execute)'))
+    }
 
     // Breadcrumbs //
     const breadcrumbsColors = colors.breadcrumbs

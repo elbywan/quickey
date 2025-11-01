@@ -11,6 +11,7 @@ const { printer } = state
 
 export interface KeyEvent {
     ctrl?: boolean
+    meta?: boolean
     name?: string
     sequence?: string
 }
@@ -51,7 +52,7 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
     })
 
     while(true) {
-        const keyMap: Map<string, Item> = state.current._getKeyMap()
+        const keyMap: Map<string, Item> = state.current._getKeyMap(state.searchMode ? state.searchQuery : undefined)
 
         printScreen(keyMap)
 
@@ -84,8 +85,45 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                 }
                 process.exit(0)
             }
-            itemMatch = keyMap.get(keyPress)
-            cmdMatch = specialCommands.find((cmd) => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
+            
+            // Handle search mode input
+            if(state.searchMode) {
+                // Check for special keys first
+                cmdMatch = specialCommands.find((cmd) => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
+                if(cmdMatch && cmdMatch.conditional && cmdMatch.conditional()) {
+                    // Exit search or execute special command
+                    break
+                }
+                
+                // Handle backspace in search
+                if(keyEvent.name === 'backspace') {
+                    state.searchQuery = state.searchQuery.slice(0, -1)
+                    printer.clear()
+                    continue
+                }
+                
+                // Handle return to execute first match
+                if(keyEvent.name === 'return') {
+                    const firstItem = keyMap.values().next().value
+                    if(firstItem) {
+                        itemMatch = firstItem
+                        state.searchMode = false
+                        state.searchQuery = ''
+                        break
+                    }
+                }
+                
+                // Add printable characters to search query
+                if(keyPress && keyPress.length === 1 && !keyEvent.ctrl && !keyEvent.meta) {
+                    state.searchQuery += keyPress
+                    printer.clear()
+                    continue
+                }
+            } else {
+                // Normal mode - match items and commands
+                itemMatch = keyMap.get(keyPress)
+                cmdMatch = specialCommands.find((cmd) => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
+            }
         }
         // Action //
         printer.clear()

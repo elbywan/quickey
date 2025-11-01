@@ -101,7 +101,20 @@ export class Quickey {
 
     /* Internal */
 
-    _getKeyMap(): Map<string, Item> {
+    _filterItemsBySearch(items: Item[], query: string): Item[] {
+        if (!query || query.trim() === '') {
+            return items
+        }
+        
+        const lowerQuery = query.trim().toLowerCase()
+        return items.filter(item => {
+            const labelMatch = item._label.toLowerCase().includes(lowerQuery)
+            const descMatch = item._description.toLowerCase().includes(lowerQuery)
+            return labelMatch || descMatch
+        })
+    }
+
+    _getKeyMap(searchQuery?: string): Map<string, Item> {
         const keyMap: Map<string, Item> = new Map()
 
         // Filter items based on their conditions
@@ -158,8 +171,14 @@ export class Quickey {
             }
         };
 
-        [...this._items, ...this._persistentItems]
-            .filter(filterByCondition)
+        let allItems = [...this._items, ...this._persistentItems].filter(filterByCondition)
+        
+        // Apply search filter if query provided
+        if (searchQuery) {
+            allItems = this._filterItemsBySearch(allItems, searchQuery)
+        }
+        
+        allItems
             .reduce(fillRegularKeysAndFilter, [])
             .forEach(fillAlternativeKeys)
         return keyMap
