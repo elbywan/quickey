@@ -13,6 +13,21 @@
         ]
     },
     {
+        "label": "Greet",
+        "description": "Greet someone by name.",
+        "prompt": "Enter a name",
+        "shell": "echo \"Hello, {{input}}!\""
+    },
+    {
+        "label": "Search",
+        "description": "Search for files.",
+        "prompts": [
+            { "name": "pattern", "message": "Search pattern" },
+            { "name": "directory", "message": "Directory to search in" }
+        ],
+        "shell": "find {{directory}} -name \"*{{pattern}}*\""
+    },
+    {
         "label": "Lists",
         "description": "Various commands related to listing files.",
         "fromArray": [

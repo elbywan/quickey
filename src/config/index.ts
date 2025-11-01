@@ -1,14 +1,17 @@
-// @flow
 import fs from 'fs'
 import path from 'path'
 import { homedir } from 'os'
 
-import type { Quickey } from '../quickey'
-import loaders from './loaders'
+import { Quickey } from '../quickey/index.js'
+import loaders, { type LoaderOptions } from './loaders.js'
 
 const { cwd } = process
 
-export function getInitConfigFile (config: Quickey, initialPath?: string) {
+export interface ConfigOptions extends LoaderOptions {
+    loader?: string;
+}
+
+export function getInitConfigFile (config: Quickey, initialPath?: string): ((q: Quickey) => Promise<void>) | null {
     if(initialPath) {
         config.cwd(path.dirname(initialPath))
         return getConfig(initialPath)
@@ -19,7 +22,7 @@ export function getInitConfigFile (config: Quickey, initialPath?: string) {
     return getConfig(path.resolve(homedir(), '.quickey.js'))
 }
 
-export function getConfig (file: string, options?: Object) {
+export function getConfig (file: string, options?: LoaderOptions): ((q: Quickey) => Promise<void>) | null {
     if(!fs.existsSync(file))
         return null
     const loader = loaders.find(({ filename }) => {
@@ -29,11 +32,10 @@ export function getConfig (file: string, options?: Object) {
             return file.endsWith(filename)
         }
     })
-    // $FlowFixMe
     return loader && loader.load(file, options) || null
 }
 
-export function getConfigFromDirectory (directory: string, options: Object = {}) {
+export function getConfigFromDirectory (directory: string, options: ConfigOptions = {}): ((q: Quickey) => Promise<void>) | null {
     const { loader } = options
     if(loader) {
         const fullpath = path.resolve(directory, loader)
@@ -58,16 +60,21 @@ export function getConfigFromDirectory (directory: string, options: Object = {})
     return null
 }
 
-export function populateConfigFromArray (array: Array<Object>, q: Quickey) {
+export interface ConfigItem {
+    from?: string;
+    fromArray?: unknown[];
+    content?: (q: Quickey) => void;
+    [key: string]: unknown;
+}
+
+export function populateConfigFromArray (array: ConfigItem[], q: Quickey): void {
     array.forEach(configItem => {
         const item = (configItem.from || configItem.fromArray || configItem.content) ? q.category('') : q.action('')
         Object.entries(configItem).forEach(([func, args]) => {
             if(func !== 'fromArray' && args instanceof Array) {
-                // $FlowFixMe
-                item[func](...args)
+                (item as any)[func](...args)
             } else {
-                // $FlowFixMe
-                item[func](args)
+                (item as any)[func](args)
             }
         })
     })

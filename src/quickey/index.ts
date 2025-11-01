@@ -1,14 +1,33 @@
-// @flow
-import type { Item } from './item'
-import { Action } from './action'
-import { Category } from './category'
-import { state } from '../state'
-import { mix } from '../tools'
+import type { Item } from './item.js'
+import { Action } from './action.js'
+import { Category } from './category.js'
+import { state } from '../state/index.js'
+import { mix } from '../tools/index.js'
+
+export interface QuickeyColorsOptions {
+    breadcrumbs: {
+        current: string;
+        currentDescription: string;
+        parents: string;
+        separator: string;
+    };
+    keys: {
+        matching: string;
+        notMatching: string;
+    };
+    categoryArrows: string;
+    extraComands: string;
+}
+
+export interface QuickeyOptions {
+    inheritOptions?: boolean;
+    useCurrentShell?: boolean;
+    colors?: Partial<QuickeyColorsOptions>;
+}
 
 export class Quickey {
-
-    _cwd: string
-    _options = {
+    _cwd?: string
+    _options: { inheritOptions: boolean; useCurrentShell: boolean; colors: QuickeyColorsOptions } = {
         inheritOptions: true,
         useCurrentShell: false,
         colors: {
@@ -30,12 +49,12 @@ export class Quickey {
     _description: string
     _items: Item[] = []
     _persistentItems: Item[] = []
-    _id: string
+    _id?: string
 
     constructor(category: string = '', description: string = '') {
         this._category = category
         this._description = description
-        if(state.current) {
+        if (state.current) {
             this._cwd = state.current._cwd
             this._persistentItems = [...state.current._persistentItems]
         }
@@ -43,16 +62,16 @@ export class Quickey {
 
     /* Public */
 
-    cwd(directory: string) {
+    cwd(directory: string): void {
         this._cwd = directory
     }
 
-    action(label: string, persist: boolean = false) {
+    action(label: string, persist: boolean = false): Action {
         const item = new Action(label)
-        if(this._options.useCurrentShell) {
+        if (this._options.useCurrentShell) {
             item.shellOptions({ shell: process.env.SHELL })
         }
-        if(persist) {
+        if (persist) {
             item._persistent = true
             this._persistentItems.push(item)
         } else {
@@ -61,9 +80,9 @@ export class Quickey {
         return item
     }
 
-    category(label: string, persist: boolean = false) {
+    category(label: string, persist: boolean = false): Category {
         const category = new Category(label)
-        if(persist) {
+        if (persist) {
             category._persistent = true
             this._persistentItems.push(category)
         } else {
@@ -72,55 +91,61 @@ export class Quickey {
         return category
     }
 
-    options(options: Object): this {
+    options(options: QuickeyOptions): this {
         this._options = mix(
             this._options,
-            options
+            options as any
         )
         return this
     }
 
     /* Internal */
 
-    _getKeyMap() {
+    _getKeyMap(): Map<string, Item> {
         const keyMap: Map<string, Item> = new Map()
 
-        const fillRegularKeysAndFilter = (acc, item) => {
+        const fillRegularKeysAndFilter = (acc: Item[], item: Item): Item[] => {
             const key = (item._key && item._key.toLowerCase()) || item._label.charAt(0).toLowerCase()
-            if(!keyMap.has(key))
+            if (!keyMap.has(key)) {
                 keyMap.set(key, item)
-            else
+            } else {
                 acc.push(item)
+            }
             return acc
         }
-        const fillAlternativeKeys = item => {
-            if(!item._alternativeKey)
+
+        const fillAlternativeKeys = (item: Item): void => {
+            if (!item._alternativeKey) {
                 return
+            }
 
             const alternativeKey = typeof item._alternativeKey === 'string' && item._alternativeKey.toLowerCase() || ''
 
-            if(alternativeKey && !keyMap.has(alternativeKey)) {
-                return keyMap.set(alternativeKey, item)
+            if (alternativeKey && !keyMap.has(alternativeKey)) {
+                keyMap.set(alternativeKey, item)
+                return
             }
 
             // Iterate each letter and use it if not already in use
-            for(let i = 1; i < item._label.length; i++) {
+            for (let i = 1; i < item._label.length; i++) {
                 const char = item._label.charAt(i)
-                if(!keyMap.has(char)) {
-                    return keyMap.set(char, item)
+                if (!keyMap.has(char)) {
+                    keyMap.set(char, item)
+                    return
                 }
             }
 
             // a (97) -> z (122)
-            for(let i = 97; i <= 122; i++) {
+            for (let i = 97; i <= 122; i++) {
                 const char = String.fromCharCode(i)
-                if(!keyMap.has(char)) {
-                    return keyMap.set(char, item)
+                if (!keyMap.has(char)) {
+                    keyMap.set(char, item)
+                    return
                 }
             }
         };
 
-        [ ...this._items, ...this._persistentItems ]
+        [...this._items, ...this._persistentItems]
             .reduce(fillRegularKeysAndFilter, [])
             .forEach(fillAlternativeKeys)
         return keyMap

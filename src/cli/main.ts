@@ -1,23 +1,28 @@
-// @flow
 import chalk from 'chalk'
 
-import type { Item } from '../quickey/item'
-import { Quickey } from '../quickey'
-import { getInitConfigFile } from '../config'
-import { state } from '../state'
-import { specialCommands } from '../state/special'
-import { printScreen } from '../printer'
+import { Item } from '../quickey/item.js'
+import { Quickey } from '../quickey/index.js'
+import { getInitConfigFile } from '../config/index.js'
+import { state } from '../state/index.js'
+import { specialCommands } from '../state/special.js'
+import { printScreen } from '../printer/index.js'
 
 const { printer } = state
 
-type KeyListener = (key: string, keyEvent: Object) => void
+export interface KeyEvent {
+    ctrl?: boolean
+    name?: string
+    sequence?: string
+}
+
+type KeyListener = (key: string, keyEvent: KeyEvent) => void
 type LoopOptions = { file?: string }
-type KeyEventArray = Array<any>
+type KeyEventArray = [string, KeyEvent]
 type GeneratorYield = LoopOptions | KeyEventArray
 
-export function * mainLoop (keyListener: KeyListener): Generator<*, *, GeneratorYield> {
+export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<GeneratorYield | undefined, void, GeneratorYield | undefined> {
     const options = yield
-    const { file } = !(options instanceof Array) && options || {}
+    const { file } = !(options instanceof Array) && options || {} as LoopOptions
 
     const quickey: Quickey = new Quickey(chalk.bgBlack.white(' Quickey '), chalk.white('Press the colored key to execute the command'))
     const configFile = getInitConfigFile(quickey, file)
@@ -37,7 +42,7 @@ export function * mainLoop (keyListener: KeyListener): Generator<*, *, Generator
         )
         process.exit(1)
     } else {
-        configFile(quickey)
+        await configFile(quickey)
         state.current = quickey
     }
 
@@ -52,18 +57,24 @@ export function * mainLoop (keyListener: KeyListener): Generator<*, *, Generator
 
         // Keypress loop //
         let keyPress = ''
-        let keyEvent = {}
-        let itemMatch = null
+        let keyEvent: KeyEvent = {}
+        let itemMatch: Item | undefined = undefined
         let cmdMatch = null
         while(!itemMatch && !cmdMatch) {
             process.stdin.once('keypress', keyListener);
-            (process.stdin: any).setRawMode(true);
-            [ keyPress, keyEvent ] = yield
+            (process.stdin as any).setRawMode(true)
+            const yieldResult = yield
+            if(!yieldResult || !(yieldResult instanceof Array)) {
+                keyPress = ''
+                keyEvent = {}
+            } else {
+                [ keyPress, keyEvent ] = yieldResult
+            }
             if(!keyPress || !keyEvent) {
                 process.stdin.removeListener('keypress', keyListener)
                 break
             }
-            (process.stdin: any).setRawMode(false)
+            (process.stdin as any).setRawMode(false)
             if(keyEvent.ctrl && keyEvent.name === 'c') {
                 printer.clear()
                 const nbOfAsyncProcesses = state.asyncRunning.size
@@ -74,15 +85,15 @@ export function * mainLoop (keyListener: KeyListener): Generator<*, *, Generator
                 process.exit(0)
             }
             itemMatch = keyMap.get(keyPress)
-            cmdMatch = specialCommands.find(cmd => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
+            cmdMatch = specialCommands.find((cmd) => cmd.key === keyEvent.name || cmd.key === keyEvent.sequence)
         }
         // Action //
         printer.clear()
         if(cmdMatch) {
             if(!cmdMatch.conditional || cmdMatch.conditional())
-                cmdMatch.action()
+                await cmdMatch.action()
         } else if(itemMatch) {
-            itemMatch && itemMatch._action()
+            await itemMatch._action()
         }
     }
 }
