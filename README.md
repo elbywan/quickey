@@ -985,6 +985,126 @@ q.action('Start').description('Start API server for backend development')
 - Whitespace is automatically trimmed from search queries
 - Empty search shows all available actions
 
+## Command History
+
+Quickey automatically tracks all executed commands and allows you to quickly re-run them from a history menu.
+
+### Accessing History
+
+Press `h` at any time to view your command history:
+
+- Recent commands are shown first
+- Each entry displays: exit status (✓/✗), type ($/js), execution time, and command
+- Select any entry to re-run it
+- History persists during the current session (up to 50 most recent commands)
+
+### Example History Display
+
+```
+✓ [$] 14:32:15 - npm run build
+✗ [$] 14:31:42 - npm test
+✓ [js] 14:30:10 - Log message
+✓ [$] 14:28:33 - git status
+```
+
+### History Features
+
+**Automatic Tracking:**
+```javascript
+export default function(q) {
+  // All shell commands are tracked
+  q.action('Build')
+    .shell('npm run build')
+  
+  // JavaScript actions are tracked too
+  q.action('Log Info')
+    .javascript(() => console.log('Info'))
+}
+```
+
+**Quick Re-run:**
+- Press `h` to view history
+- Navigate to any command
+- Press Enter to execute it again
+- Shell commands run with their original command
+- JavaScript actions show an info message (functions can't be re-run)
+
+**Exit Code Tracking:**
+```
+✓ - Command succeeded (exit code 0)
+✗ - Command failed (exit code non-zero)
+```
+
+**Command Types:**
+```
+[$]  - Shell command
+[js] - JavaScript action
+```
+
+### History Behavior
+
+- **Capacity**: Stores up to 50 most recent commands
+- **Ordering**: Most recent commands appear first
+- **Session-based**: History is cleared when you exit Quickey
+- **Smart tracking**: Only actual command executions are tracked (not menu navigation)
+- **Exit codes**: Shows success/failure status for each command
+- **Timestamps**: Shows exact execution time for each command
+
+### Visibility
+
+The `h` key only appears when:
+- You're not in search mode (press `ESC` to exit search first)
+- There's at least one command in history
+- You're at the root menu or in a category
+
+### Use Cases
+
+**Debugging:**
+```javascript
+// Run a failing test multiple times
+// - Execute: npm test
+// - Check output
+// - Make code changes
+// - Press 'h' and re-run the test
+// - Repeat until fixed
+```
+
+**Development Workflow:**
+```javascript
+// Typical cycle:
+// 1. npm run build (✓)
+// 2. npm test (✗ - failed)
+// 3. Fix code
+// 4. Press 'h' to access history
+// 5. Re-run build
+// 6. Re-run test
+```
+
+**Comparing Outputs:**
+```javascript
+// Run same command with different conditions
+// - Execute command once
+// - Change environment or code
+// - Press 'h' and re-run
+// - Compare results
+```
+
+### Tips
+
+- Use history to quickly repeat long commands without navigating menus
+- Check exit codes (✓/✗) to see which commands succeeded or failed
+- History is especially useful during debugging sessions
+- JavaScript functions can't be re-executed from history (only shell commands)
+- History is session-specific and doesn't persist across Quickey restarts
+
+### How Command History Works
+
+1. **Tracking**: Every command execution is automatically recorded
+2. **Storage**: History entries include timestamp, label, command, type, and exit code
+3. **Display**: Press `h` to see a menu of recent commands
+4. **Re-execution**: Selecting a history entry re-runs the command
+5. **Limits**: Oldest entries are automatically removed when limit (50) is reached
+
 ## Usage
 
 ```bash

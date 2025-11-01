@@ -1,7 +1,7 @@
 import chalk from 'chalk'
 import type { ChildProcess } from 'child_process'
 
-import { state, pop, push, getColors } from '../state/index.js'
+import { state, pop, push, getColors, getHistory } from '../state/index.js'
 import { refreshScreen } from '../printer/index.js'
 import type { Printer } from '../printer/index.js'
 import { runCommand } from '../tools/index.js'
@@ -23,6 +23,37 @@ export const specialCommands = [
         action: () => {
             state.searchMode = false
             state.searchQuery = ''
+        }
+    },
+    {
+        key: 'h',
+        text: () => (chalk as any)[getColors().extraComands]('h') + ': command history',
+        conditional: () => !state.searchMode && getHistory().length > 0,
+        action: () => {
+            const quickey = push('Command History', 'Recently executed commands. Select to re-run.')
+            quickey._id = 'command-history'
+            
+            const history = getHistory()
+            history.forEach((entry) => {
+                const date = new Date(entry.timestamp)
+                const timeStr = date.toLocaleTimeString()
+                const exitSymbol = entry.exitCode === 0 ? '✓' : '✗'
+                const typeSymbol = entry.type === 'shell' ? '$' : 'js'
+                
+                const description = `${exitSymbol} [${typeSymbol}] ${timeStr} - ${entry.command}`
+                
+                const action = quickey.action(entry.label).description(description)
+                
+                if (entry.type === 'shell') {
+                    action.shell(entry.command)
+                } else {
+                    // For javascript, we can't re-run the original function, so show a message
+                    action.javascript(() => {
+                        console.log(`Cannot re-run JavaScript action: ${entry.label}`)
+                        console.log('JavaScript actions cannot be stored and re-executed from history.')
+                    })
+                }
+            })
         }
     },
     {

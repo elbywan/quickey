@@ -18,6 +18,14 @@ function getPrinter(): Printer {
     return _printer
 }
 
+export interface HistoryEntry {
+    timestamp: number
+    label: string
+    command: string
+    type: 'shell' | 'javascript'
+    exitCode?: number
+}
+
 export const state: {
     parents: Quickey[];
     current: Quickey;
@@ -28,6 +36,7 @@ export const state: {
     asyncBuffer: CircularStringBuffer;
     searchMode: boolean;
     searchQuery: string;
+    commandHistory: HistoryEntry[];
 } = {
     parents: [],
     current: null as any,
@@ -38,7 +47,8 @@ export const state: {
     asyncRunning: new Map(),
     asyncBuffer: new CircularStringBuffer(100),
     searchMode: false,
-    searchQuery: ''
+    searchQuery: '',
+    commandHistory: []
 }
 
 export function getColors() {
@@ -79,4 +89,31 @@ export function addAsync(label: string, command: string, subprocess: ChildProces
 
 export function removeAsync(subprocess: ChildProcess): void {
     state.asyncRunning.delete(subprocess)
+}
+
+const MAX_HISTORY_SIZE = 50
+
+export function addToHistory(label: string, command: string, type: 'shell' | 'javascript', exitCode?: number): void {
+    const entry: HistoryEntry = {
+        timestamp: Date.now(),
+        label,
+        command,
+        type,
+        exitCode
+    }
+    
+    state.commandHistory.unshift(entry)
+    
+    // Keep only the most recent MAX_HISTORY_SIZE entries
+    if (state.commandHistory.length > MAX_HISTORY_SIZE) {
+        state.commandHistory.length = MAX_HISTORY_SIZE
+    }
+}
+
+export function getHistory(): HistoryEntry[] {
+    return state.commandHistory
+}
+
+export function clearHistory(): void {
+    state.commandHistory = []
 }

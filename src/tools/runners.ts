@@ -3,7 +3,7 @@ import { spawn, execSync, type ExecSyncOptions, type SpawnOptions } from 'child_
 
 import { CircularStringBuffer } from './circularstringbuffer.js'
 import { refreshScreen, printCommandResult } from '../printer/index.js'
-import { state, pop, addAsync, removeAsync } from '../state/index.js'
+import { state, pop, addAsync, removeAsync, addToHistory } from '../state/index.js'
 import { specialCommands } from '../state/special.js'
 
 export interface ShellOptions extends ExecSyncOptions {
@@ -34,6 +34,9 @@ export function runCommand(label: string, command: string, execOptions: ShellOpt
 
     printer.line('', false)
     printCommandResult(label, code, signal)
+    
+    // Add to history
+    addToHistory(label, command, 'shell', code ?? state.lastCode)
 }
 
 export function runCommandAsync(label: string, command: string, execOptions: SpawnOptions = {}): void {
@@ -91,6 +94,7 @@ export function runJavascript(label: string, code: () => any): void {
     printer.line(`> ${label}`, false)
     printer.line('', false)
 
+    let exitCode = 0
     try {
         const style = chalk.bold.green
         const returnValue = code()
@@ -99,6 +103,7 @@ export function runJavascript(label: string, code: () => any): void {
             ' exited and returned value ' +
             '[' + style(returnValue) + '] ', false)
     } catch (error) {
+        exitCode = 1
         const style = chalk.bold.red
         const message = error instanceof Error ? error.message : String(error)
         printer.line(
@@ -107,4 +112,7 @@ export function runJavascript(label: string, code: () => any): void {
             '[' + style(message) + '] ', false)
     }
     printer.line('', false)
+    
+    // Add to history
+    addToHistory(label, label, 'javascript', exitCode)
 }
