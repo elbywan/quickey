@@ -87,12 +87,55 @@ export class Action extends Item {
     prompt(nameOrMessage: string, message?: string): this {
         if (message) {
             // Named prompt: prompt('name', 'message')
-            this._prompts.push({ name: nameOrMessage, message })
+            this._prompts.push({ name: nameOrMessage, message, type: 'text' })
         } else {
             // Unnamed prompt: prompt('message') - use 'input' as default name
             const name = this._prompts.length === 0 ? 'input' : `input${this._prompts.length}`
-            this._prompts.push({ name, message: nameOrMessage })
+            this._prompts.push({ name, message: nameOrMessage, type: 'text' })
         }
+        return this
+    }
+
+    /**
+     * Add a select prompt for choosing from options
+     *
+     * @example
+     * action
+     *   .select('env', 'Choose environment', ['dev', 'staging', 'prod'])
+     *   .shell('deploy --env {{env}}')
+     */
+    select(name: string, message: string, options: string[]): this {
+        this._prompts.push({ name, message, type: 'select', options })
+        return this
+    }
+
+    /**
+     * Add a confirmation prompt (yes/no)
+     *
+     * @example
+     * action
+     *   .confirm('proceed', 'Deploy to production?', false)
+     *   .javascript(function() {
+     *     if (this.values.proceed === 'true') {
+     *       // proceed with deployment
+     *     }
+     *   })
+     */
+    confirm(name: string, message: string, defaultValue: boolean = false): this {
+        this._prompts.push({ name, message, type: 'confirm', default: defaultValue })
+        return this
+    }
+
+    /**
+     * Add a password prompt (hidden input)
+     *
+     * @example
+     * action
+     *   .password('token', 'API Token')
+     *   .shell('deploy --token {{token}}')
+     */
+    password(name: string, message: string): this {
+        this._prompts.push({ name, message, type: 'password' })
         return this
     }
 

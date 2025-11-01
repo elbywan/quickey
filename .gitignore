@@ -64,3 +64,6 @@ typings/
 /dist
 
 /.quickey.js
+
+# TODO tracking
+TODO.md

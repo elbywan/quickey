@@ -26,6 +26,27 @@ export default quickey => {
         .prompt('directory', 'Directory to search in')
         .shell('find {{directory}} -name "*{{pattern}}*"')
 
+    // Action with select prompt
+    quickey
+        .action('Deploy')
+        .description('Deploy to environment.')
+        .select('env', 'Choose environment', ['development', 'staging', 'production'])
+        .shell('npm run deploy:{{env}}')
+
+    // Action with confirmation prompt
+    quickey
+        .action('Clean')
+        .description('Remove build artifacts.')
+        .confirm('proceed', 'Delete all build files?', false)
+        .shell('[ "{{proceed}}" = "true" ] && rm -rf dist build || echo "Cancelled"')
+
+    // Action with password prompt
+    quickey
+        .action('Authenticate')
+        .description('Login with API token.')
+        .password('token', 'API Token')
+        .shell('echo "Token: {{token}}" | wc -c')
+
     // A simple category containing lists commands
     quickey
         .category('Lists')

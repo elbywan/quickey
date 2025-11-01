@@ -113,7 +113,7 @@ export default function(q) {
 
 Quickey supports prompting users for input before executing commands. Use placeholders like `{{name}}` in your shell commands to inject user input.
 
-### Single Prompt (JavaScript)
+### Text Prompts (JavaScript)
 ```javascript
 // Unnamed prompt - uses {{input}} placeholder
 action.prompt('Enter package name')
@@ -122,21 +122,62 @@ action.prompt('Enter package name')
 // Named prompt - uses {{package}} placeholder
 action.prompt('package', 'Enter package name')
   .shell('npm install {{package}}')
-```
 
-### Multiple Prompts (JavaScript)
-```javascript
-// Chained prompts
+// Multiple text prompts
 action
   .prompt('env', 'Environment')
   .prompt('version', 'Version')
   .shell('deploy --env {{env}} --version {{version}}')
+```
 
-// Array syntax
-action.prompts([
-  { name: 'env', message: 'Environment' },
-  { name: 'version', message: 'Version' }
-]).shell('deploy --env {{env}} --version {{version}}')
+### Select Prompts
+```javascript
+// Choose from a list of options
+action
+  .select('env', 'Choose environment', ['dev', 'staging', 'prod'])
+  .shell('deploy --env {{env}}')
+
+action
+  .select('region', 'Select region', ['us-east', 'us-west', 'eu-central'])
+  .select('size', 'Instance size', ['small', 'medium', 'large'])
+  .shell('provision --region {{region}} --size {{size}}')
+```
+
+### Confirmation Prompts
+```javascript
+// Yes/No confirmation (default: false)
+action
+  .confirm('proceed', 'Deploy to production?')
+  .shell('echo {{proceed}} && deploy')
+
+// With default value (true)
+action
+  .confirm('backup', 'Create backup before deployment?', true)
+  .shell('[ "{{backup}}" = "true" ] && backup.sh; deploy.sh')
+```
+
+### Password Prompts
+```javascript
+// Hidden input for sensitive data
+action
+  .password('token', 'API Token')
+  .shell('curl -H "Authorization: Bearer {{token}}" https://api.example.com')
+
+action
+  .prompt('username', 'Username')
+  .password('password', 'Password')
+  .shell('login --user {{username}} --pass {{password}}')
+```
+
+### Mixed Prompt Types
+```javascript
+// Combine different prompt types
+action
+  .prompt('name', 'Project name')
+  .select('type', 'Project type', ['web', 'mobile', 'desktop'])
+  .confirm('git', 'Initialize git repository?', true)
+  .password('token', 'GitHub token (optional)')
+  .shell('create-project --name {{name}} --type {{type}}')
 ```
 
 ### Prompts in JSON/YAML
@@ -152,10 +193,10 @@ action.prompts([
 {
   "label": "deploy",
   "prompts": [
-    { "name": "env", "message": "Environment" },
-    { "name": "version", "message": "Version" }
+    { "name": "env", "message": "Environment", "type": "select", "options": ["dev", "prod"] },
+    { "name": "confirm", "message": "Proceed?", "type": "confirm", "default": false }
   ],
-  "shell": "deploy --env {{env}} --version {{version}}"
+  "shell": "deploy --env {{env}}"
 }
 ```
 
