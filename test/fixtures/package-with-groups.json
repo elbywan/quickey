@@ -1,0 +1,32 @@
+{
+  "name": "test-package-with-groups",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node index.js",
+    "build": "tsc",
+    "build:prod": "tsc --minify",
+    "build:dev": "tsc --watch",
+    "test": "node --test",
+    "test:unit": "node --test unit",
+    "test:integration": "node --test integration",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "dev": "node --watch index.js",
+    "dev:debug": "node --inspect --watch index.js"
+  },
+  "scriptsComments": {
+    "start": "Start the application",
+    "build": "Build for production",
+    "build:prod": "Build with optimizations",
+    "build:dev": "Build in watch mode",
+    "test": "Run all tests",
+    "test:unit": "Run unit tests only",
+    "test:integration": "Run integration tests",
+    "test:e2e": "Run end-to-end tests",
+    "lint": "Check code style",
+    "lint:fix": "Fix code style issues",
+    "dev": "Development mode",
+    "dev:debug": "Development mode with debugger"
+  }
+}

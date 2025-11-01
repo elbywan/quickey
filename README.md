@@ -27,6 +27,207 @@ cd your-project
 quickey
 ```
 
+## npm Scripts Integration
+
+Quickey automatically loads npm scripts from your `package.json` with enhanced features for better organization and documentation.
+
+### Basic npm Scripts Loading
+
+When you run Quickey in a directory with a `package.json` file, all npm scripts are automatically available as actions:
+
+```json
+{
+  "scripts": {
+    "start": "node index.js",
+    "build": "tsc",
+    "test": "node --test"
+  }
+}
+```
+
+These scripts become available in the Quickey menu as executable actions.
+
+### Script Grouping by Prefix
+
+Scripts with common prefixes are automatically grouped into categories. For example:
+
+```json
+{
+  "scripts": {
+    "test": "node --test",
+    "test:unit": "node --test unit",
+    "test:integration": "node --test integration",
+    "test:e2e": "playwright test",
+    "build": "tsc",
+    "build:prod": "tsc --minify",
+    "build:dev": "tsc --watch"
+  }
+}
+```
+
+This creates organized categories in the Quickey menu:
+
+```
+test
+├── unit - Run unit tests only
+├── integration - Run integration tests
+└── e2e - Run end-to-end tests
+
+build
+├── prod - Build with optimizations
+└── dev - Build in watch mode
+```
+
+**How it works:**
+- Scripts like `test:unit` and `test:integration` are grouped under a "test" category
+- The prefix (before the colon) becomes the category name
+- The suffix (after the colon) becomes the action name
+- Ungrouped scripts like `start` remain as standalone actions
+
+### Script Descriptions with scriptsComments
+
+Add user-friendly descriptions to your scripts using the `scriptsComments` field:
+
+```json
+{
+  "scripts": {
+    "start": "node index.js",
+    "build": "tsc",
+    "test:unit": "node --test unit",
+    "test:integration": "node --test integration"
+  },
+  "scriptsComments": {
+    "start": "Start the application",
+    "build": "Build for production",
+    "test:unit": "Run unit tests only",
+    "test:integration": "Run integration tests"
+  }
+}
+```
+
+These descriptions appear in the Quickey menu, making it easier to understand what each script does without reading the actual commands.
+
+### Configuration Options
+
+Control how npm scripts are loaded using the `.quickey.js` configuration:
+
+```javascript
+export default function(q) {
+  // Customize npm scripts loading
+  q.loadPackageJson({
+    groupByPrefix: true,        // Enable script grouping (default: true)
+    useScriptComments: true     // Use scriptsComments for descriptions (default: true)
+  })
+  
+  // Add your custom actions
+  q.action('deploy')
+    .shell('npm run build && npm run deploy')
+}
+```
+
+**Configuration options:**
+- `groupByPrefix` (boolean, default: `true`): Group scripts by prefix (e.g., `test:unit` → test category)
+- `useScriptComments` (boolean, default: `true`): Use `scriptsComments` field for action descriptions
+
+### Complete Example
+
+Here's a full example showing all features:
+
+**package.json:**
+```json
+{
+  "name": "my-app",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "dev:debug": "node --inspect --watch server.js",
+    "build": "tsc",
+    "build:prod": "tsc --minify",
+    "build:dev": "tsc --watch",
+    "test": "node --test",
+    "test:unit": "node --test unit",
+    "test:integration": "node --test integration",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "scriptsComments": {
+    "start": "Start the production server",
+    "dev": "Development mode with hot reload",
+    "dev:debug": "Development mode with debugger attached",
+    "build": "Build for production",
+    "build:prod": "Build with all optimizations",
+    "build:dev": "Build in watch mode for development",
+    "test": "Run all tests",
+    "test:unit": "Run unit tests only",
+    "test:integration": "Run integration tests",
+    "test:e2e": "Run end-to-end tests with Playwright",
+    "lint": "Check code style with ESLint",
+    "lint:fix": "Automatically fix code style issues"
+  }
+}
+```
+
+**Quickey menu output:**
+```
+Main Menu:
+  s) start - Start the production server
+  
+dev
+├── (default) - Development mode with hot reload
+└── debug - Development mode with debugger attached
+
+build
+├── (default) - Build for production
+├── prod - Build with all optimizations
+└── dev - Build in watch mode for development
+
+test
+├── (default) - Run all tests
+├── unit - Run unit tests only
+├── integration - Run integration tests
+└── e2e - Run end-to-end tests with Playwright
+
+lint
+├── (default) - Check code style with ESLint
+└── fix - Automatically fix code style issues
+```
+
+### Backwards Compatibility
+
+- Existing projects without `scriptsComments` continue to work normally
+- Scripts without prefixes remain as standalone actions
+- Disabling `groupByPrefix` shows all scripts as individual actions (legacy behavior)
+- The npm/yarn/pnpm category is always available as a persistent action
+
+### Tips for Better Organization
+
+**Use consistent prefixes:**
+```json
+{
+  "scripts": {
+    "test:unit": "...",
+    "test:integration": "...",
+    "test:e2e": "..."
+  }
+}
+```
+
+**Add descriptive comments:**
+```json
+{
+  "scriptsComments": {
+    "test:unit": "Fast unit tests for isolated functions",
+    "test:integration": "Integration tests with database",
+    "test:e2e": "Full browser-based end-to-end tests"
+  }
+}
+```
+
+**Use (default) for base commands:**
+When you have both `test` and `test:unit`, the `test` script becomes the "(default)" action in the test category.
+
 ## Configuration
 
 Quickey supports multiple configuration formats:
