@@ -255,6 +255,85 @@ action('clean')
   .shell('rm -rf dist/ build/ node_modules/')
 ```
 
+## Command Chaining
+
+Chain multiple commands to execute sequentially with automatic error handling. Commands execute based on the exit code of the previous command.
+
+### Basic Chaining with then()
+```javascript
+// Chain commands that run sequentially on success
+action('build-and-test')
+  .shell('npm run build')
+  .then('npm test')
+  .then('npm run lint')
+  .then('echo "All checks passed!"')
+
+// Chain JavaScript functions
+action('deploy')
+  .shell('git pull')
+  .then(() => console.log('Code updated!'))
+  .then('npm install')
+  .then('npm run build')
+```
+
+### Error Handling with onError()
+```javascript
+// Execute commands only if previous command fails
+action('deploy')
+  .shell('npm run deploy')
+  .onError('npm run rollback')
+  .onError(() => console.error('Deployment failed!'))
+
+// Mix success and error handlers
+action('migrate')
+  .shell('npm run db:backup')
+  .then('npm run db:migrate')
+  .onError('npm run db:restore')
+  .then('echo "Migration complete!"')
+```
+
+### Complex Workflows
+```javascript
+// Build pipeline with error recovery
+action('ci-pipeline')
+  .shell('npm run build')
+  .then('npm test')
+  .then('npm run coverage')
+  .onError('echo "Tests failed - cleaning up"')
+  .onError('npm run clean')
+
+// Deployment with rollback
+action('prod-deploy')
+  .prompt('version', 'Version to deploy')
+  .requireConfirmation('Deploy v{{version}} to production?')
+  .shell('git pull origin main')
+  .then('npm install')
+  .then('npm run build')
+  .then('pm2 restart app')
+  .then('npm run verify-deployment')
+  .onError('git reset --hard HEAD~1')
+  .onError('pm2 restart app')
+  .onError('echo "Deployment rolled back"')
+
+// Database operations
+action('reset-db')
+  .select('env', 'Environment', ['dev', 'staging'])
+  .requireConfirmation('Reset {{env}} database?')
+  .shell('npm run db:backup')
+  .then('npm run db:reset')
+  .then('npm run db:seed')
+  .then(() => console.log('Database reset complete'))
+  .onError('npm run db:restore')
+```
+
+### How Chaining Works
+- **then()**: Executes only if the previous command exits with code 0 (success)
+- **onError()**: Executes only if the previous command exits with non-zero code (failure)
+- Chains stop executing at the first failure (unless using onError handlers)
+- Error handlers don't stop the chain - subsequent then() handlers still run if an error handler succeeds
+- Works with both shell commands and JavaScript functions
+- Note: Chaining is not supported with async commands
+
 ## Usage
 
 ```bash

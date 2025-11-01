@@ -11,12 +11,21 @@ import {
 } from '../tools/index.js'
 import { state } from '../state/index.js'
 
+export interface ChainLink {
+    type: 'shell' | 'javascript'
+    shell?: string
+    code?: () => any
+    options?: ShellOptions
+    onError?: boolean  // If true, only run if previous command failed
+}
+
 export class Action extends Item {
     _shellOptions: ShellOptions = {}
     _code?: () => any
     _prompts: PromptDefinition[] = []
     _confirmMessage?: string
     _confirmDefault: boolean = false
+    _chains: ChainLink[] = []
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -49,14 +58,34 @@ export class Action extends Item {
                 }
             }
 
+            // Execute primary command
             if (command) {
                 if (this._shellOptions.async) {
                     runCommandAsync(this._label, command, this._shellOptions)
+                    // Async commands don't support chaining
+                    return
                 } else {
                     runCommand(this._label, command, this._shellOptions)
                 }
             } else if (this._code) {
                 runJavascript(this._label, this._code)
+            }
+
+            // Execute chained commands based on exit code
+            if (this._chains.length > 0) {
+                for (const chain of this._chains) {
+                    const lastCode = state.lastCode ?? 0
+                    
+                    // Skip if conditions don't match
+                    if (chain.onError && lastCode === 0) continue
+                    if (!chain.onError && lastCode !== 0) break
+
+                    if (chain.type === 'shell' && chain.shell) {
+                        runCommand(this._label, chain.shell, chain.options)
+                    } else if (chain.type === 'javascript' && chain.code) {
+                        runJavascript(this._label, chain.code)
+                    }
+                }
             }
         })
     }
@@ -191,6 +220,71 @@ export class Action extends Item {
     requireConfirmation(message: string, defaultValue: boolean = false): this {
         this._confirmMessage = message
         this._confirmDefault = defaultValue
+        return this
+    }
+
+    /**
+     * Chain another command to execute after the current one succeeds (exit code 0)
+     *
+     * @param commandOrCode - Shell command string or JavaScript function
+     * @param options - Optional shell options (only for shell commands)
+     *
+     * @example
+     * // Chain shell commands
+     * action
+     *   .shell('npm run build')
+     *   .then('npm test')
+     *   .then('npm run deploy')
+     *
+     * // Chain with JavaScript
+     * action
+     *   .shell('git pull')
+     *   .then(() => console.log('Pull complete!'))
+     *
+     * // Mix shell and JavaScript
+     * action
+     *   .shell('npm install')
+     *   .then(() => console.log('Dependencies installed'))
+     *   .then('npm run build')
+     */
+    then(commandOrCode: string | (() => any), options?: ShellOptions): this {
+        if (typeof commandOrCode === 'string') {
+            this._chains.push({ type: 'shell', shell: commandOrCode, options, onError: false })
+        } else {
+            this._chains.push({ type: 'javascript', code: commandOrCode, onError: false })
+        }
+        return this
+    }
+
+    /**
+     * Chain a command to execute only if the previous command fails (non-zero exit code)
+     *
+     * @param commandOrCode - Shell command string or JavaScript function
+     * @param options - Optional shell options (only for shell commands)
+     *
+     * @example
+     * // Execute cleanup on error
+     * action
+     *   .shell('npm run deploy')
+     *   .onError('npm run rollback')
+     *
+     * // Log error with JavaScript
+     * action
+     *   .shell('risky-command')
+     *   .onError(() => console.error('Command failed!'))
+     *
+     * // Complex error handling
+     * action
+     *   .shell('npm test')
+     *   .onError('echo "Tests failed"')
+     *   .onError(() => console.error('Build pipeline stopped'))
+     */
+    onError(commandOrCode: string | (() => any), options?: ShellOptions): this {
+        if (typeof commandOrCode === 'string') {
+            this._chains.push({ type: 'shell', shell: commandOrCode, options, onError: true })
+        } else {
+            this._chains.push({ type: 'javascript', code: commandOrCode, onError: true })
+        }
         return this
     }
 }
