@@ -36,6 +36,7 @@ export class Action extends Item {
     _envVars: Record<string, string> = {}
     _beforeHooks: Hook[] = []
     _afterHooks: Hook[] = []
+    _workingDir?: string
 
     constructor(label: string, description?: string) {
         super(label, description || '', async function(this: Action) {
@@ -43,14 +44,24 @@ export class Action extends Item {
 
             // Handle prompts if defined
             let promptValues: Record<string, string> = {}
-            if (this._prompts.length > 0 && command) {
+            if (this._prompts.length > 0 && (command || this._workingDir)) {
                 const { printer } = state
                 printer.line('', false)
 
                 promptValues = await promptUserMultiple(this._prompts)
-                command = replacePromptPlaceholders(command, promptValues)
+                if (command) {
+                    command = replacePromptPlaceholders(command, promptValues)
+                }
 
                 printer.line('', false)
+            }
+
+            // Save original working directory and set new one if specified
+            let originalCwd: string | undefined
+            if (this._workingDir) {
+                const processedWorkingDir = replacePromptPlaceholders(this._workingDir, promptValues)
+                originalCwd = state.current._cwd
+                state.current._cwd = processedWorkingDir
             }
 
             // Process environment variables
@@ -140,6 +151,11 @@ export class Action extends Item {
                         runJavascript(this._label, () => hook.code!(finalExitCode))
                     }
                 }
+            }
+
+            // Restore original working directory if it was changed
+            if (originalCwd !== undefined) {
+                state.current._cwd = originalCwd
             }
         })
     }
@@ -481,6 +497,42 @@ export class Action extends Item {
         } else {
             this._afterHooks.push({ type: 'javascript', code: commandOrCode })
         }
+        return this
+    }
+
+    /**
+     * Set the working directory for command execution
+     * The directory is temporarily changed for this action only and restored afterwards
+     *
+     * @param path - Directory path (can include prompt placeholders)
+     *
+     * @example
+     * // Run command in specific directory
+     * action
+     *   .in('/path/to/project')
+     *   .shell('npm test')
+     *
+     * // Use dynamic path from prompt
+     * action
+     *   .prompt('dir', 'Enter directory')
+     *   .in('{{dir}}')
+     *   .shell('ls -la')
+     *
+     * // Combine with other methods
+     * action
+     *   .select('env', 'Environment', ['dev', 'staging', 'prod'])
+     *   .in('./environments/{{env}}')
+     *   .shell('npm run build')
+     *
+     * // Works with chains and hooks
+     * action
+     *   .in('./backend')
+     *   .before('npm install')
+     *   .shell('npm test')
+     *   .then('npm run build')
+     */
+    in(path: string): this {
+        this._workingDir = path
         return this
     }
 }

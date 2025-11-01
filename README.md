@@ -1105,6 +1105,226 @@ The `h` key only appears when:
 4. **Re-execution**: Selecting a history entry re-runs the command
 5. **Limits**: Oldest entries are automatically removed when limit (50) is reached
 
+## Working Directory
+
+Change the working directory temporarily for command execution. The directory is automatically restored after the action completes, including all chains and hooks.
+
+### Basic Usage
+
+```javascript
+// Execute command in a specific directory
+action('Build Project')
+  .in('/path/to/project')
+  .shell('npm run build')
+
+// Use relative paths (relative to current directory)
+action('Test Module')
+  .in('./packages/core')
+  .shell('npm test')
+
+// Navigate up directories
+action('Run Root Script')
+  .in('../../')
+  .shell('./script.sh')
+
+// Chain with other methods
+action('Deploy')
+  .in('/var/www/app')
+  .shell('git pull')
+  .then('npm install')
+  .then('pm2 restart app')
+```
+
+### Dynamic Paths from Prompts
+
+Use prompt placeholders in directory paths:
+
+```javascript
+// Single placeholder
+action('Build Package')
+  .prompt('package', 'Package name')
+  .in('./packages/{{package}}')
+  .shell('npm run build')
+
+// Multiple placeholders
+action('Test Feature')
+  .prompt('module', 'Module name')
+  .prompt('feature', 'Feature name')
+  .in('./src/{{module}}/{{feature}}')
+  .shell('npm test')
+
+// With select prompts
+action('Build Environment')
+  .select('env', 'Environment', ['dev', 'staging', 'prod'])
+  .in('/deployments/{{env}}')
+  .shell('docker-compose build')
+
+// Complex path patterns
+action('Clone and Setup')
+  .prompt('org', 'GitHub organization')
+  .prompt('repo', 'Repository name')
+  .in('/repos/{{org}}/{{repo}}')
+  .shell('git pull && npm install')
+```
+
+### With Command Chaining
+
+The working directory applies to all chained commands:
+
+```javascript
+// All commands run in the specified directory
+action('Full Pipeline')
+  .in('./microservices/api')
+  .shell('npm install')
+  .then('npm run build')
+  .then('npm test')
+  .then('npm run deploy')
+  // All above commands execute in ./microservices/api
+
+// Works with error handlers too
+action('Deploy with Rollback')
+  .in('/var/www/app')
+  .shell('git pull')
+  .then('npm install')
+  .then('pm2 restart app')
+  .onError('git reset --hard HEAD~1')
+  .onError('pm2 restart app')
+  // All commands (including error handlers) run in /var/www/app
+```
+
+### With Lifecycle Hooks
+
+Before and after hooks also execute in the specified directory:
+
+```javascript
+action('Build with Cleanup')
+  .in('./dist')
+  .before('rm -rf *')
+  .before('mkdir -p assets')
+  .shell('npm run build')
+  .after('ls -lah')
+  .after('echo "Build complete in $PWD"')
+  // All hooks and main command run in ./dist
+```
+
+### With Environment Variables
+
+Combine directory changes with environment variables:
+
+```javascript
+action('Test Environment')
+  .select('env', 'Environment', ['dev', 'staging', 'prod'])
+  .in('./env/{{env}}')
+  .env({
+    NODE_ENV: '{{env}}',
+    CONFIG_PATH: './config.{{env}}.json'
+  })
+  .shell('npm test')
+
+action('Deploy Config')
+  .prompt('region', 'AWS Region')
+  .in('/configs/{{region}}')
+  .env('AWS_REGION', '{{region}}')
+  .shell('terraform apply')
+```
+
+### Common Use Cases
+
+**Monorepo Builds:**
+```javascript
+action('Build Package')
+  .prompt('pkg', 'Package name')
+  .in('./packages/{{pkg}}')
+  .shell('npm run build')
+  .then('npm test')
+
+action('Test All Packages')
+  .in('./packages/frontend')
+  .shell('npm test')
+  .then(() => console.log('Frontend tests passed'))
+  .in('./packages/backend')  // Changes directory for new action
+  .shell('npm test')
+```
+
+**Multi-Environment Deployments:**
+```javascript
+action('Deploy Service')
+  .select('env', 'Environment', ['dev', 'staging', 'prod'])
+  .select('service', 'Service', ['api', 'worker', 'frontend'])
+  .in('/services/{{env}}/{{service}}')
+  .requireConfirmation('Deploy {{service}} to {{env}}?')
+  .shell('git pull')
+  .then('docker-compose up -d --build')
+```
+
+**Project Setup:**
+```javascript
+action('Setup New Feature')
+  .prompt('name', 'Feature name')
+  .in('./features/{{name}}')
+  .before('mkdir -p ./features/{{name}}')
+  .shell('cp -r ./templates/feature/* .')
+  .then('npm install')
+  .then('git add .')
+  .after('echo "Feature {{name}} created!"')
+```
+
+**Build Artifacts:**
+```javascript
+action('Build and Package')
+  .in('./dist')
+  .before('rm -rf *')
+  .before('mkdir -p assets images')
+  .shell('cd .. && npm run build')
+  .then('cd .. && npm run copy-assets')
+  .after('tar -czf release.tar.gz *')
+  .after('mv release.tar.gz ..')
+```
+
+### Path Formats
+
+Quickey supports multiple path formats:
+
+```javascript
+// Absolute paths (Unix)
+.in('/var/www/app')
+.in('/home/user/projects/web')
+
+// Absolute paths (Windows)
+.in('C:\\projects\\app')
+.in('D:\\www\\site')
+
+// Relative paths
+.in('./subdirectory')
+.in('../sibling-directory')
+.in('../../parent-directory')
+
+// Paths with spaces
+.in('/path/with spaces/directory')
+.in('./my project/src')
+
+// Complex paths
+.in('/var/www/{{env}}/app-{{version}}')
+.in('./packages/{{scope}}/{{name}}')
+```
+
+### How Working Directory Works
+
+- **Temporary change**: Original directory is saved and restored after execution
+- **Scope**: Applies to main command, all chains, and all hooks
+- **Placeholders**: `{{name}}` patterns are replaced with prompt values
+- **Automatic**: No manual `cd` needed - directory changes are handled automatically
+- **Safe**: Original directory is always restored, even if commands fail
+- **No side effects**: Other actions and the Quickey process are not affected
+
+### Tips
+
+- Use absolute paths for deployment and production scripts
+- Use relative paths for project-local operations
+- Combine with prompts for dynamic multi-project workflows
+- Remember that hooks also run in the specified directory
+- Directory is restored even if commands fail
+
 ## Usage
 
 ```bash
