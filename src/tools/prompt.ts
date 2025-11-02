@@ -41,206 +41,100 @@ export interface PromptResult {
 /**
  * Prompt the user for text input
  */
-export async function promptText(message: string): Promise<string> {
+export async function promptText(message: string): Promise<string | null> {
     const { printer } = state
 
     return new Promise((resolve) => {
-        // Save the current stdin state
         const wasRaw = (process.stdin as any).isRaw
         const wasPaused = process.stdin.isPaused()
 
-        // Disable raw mode for line input
-        if (wasRaw) {
-            (process.stdin as any).setRawMode(false)
+        printer.line(chalk.cyan('? ') + message + chalk.gray(' (ESC to cancel) › '), false)
+
+        let input = ''
+
+        const cleanup = () => {
+            process.stdin.removeListener('keypress', onKeypress)
+            readline.emitKeypressEvents(process.stdin)
+
+            if (!wasPaused) {
+                process.stdin.resume()
+            }
+
+            if (wasRaw) {
+                (process.stdin as any).setRawMode(true)
+            }
         }
 
-        // Resume stdin if it was paused
+        const onKeypress = (char: string, key: any) => {
+            // Handle ESC to cancel
+            if (key && key.name === 'escape') {
+                cleanup()
+                printer.line('', false)
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle Ctrl+C to cancel
+            if (key && key.ctrl && key.name === 'c') {
+                cleanup()
+                printer.line('', false)
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle backspace
+            if (key && key.name === 'backspace') {
+                if (input.length > 0) {
+                    input = input.slice(0, -1)
+                    process.stdout.write('\b \b')
+                }
+                return
+            }
+
+            // Handle return to submit
+            if (key && key.name === 'return') {
+                cleanup()
+                printer.line('', false)
+                resolve(input.trim())
+                return
+            }
+
+            // Handle printable characters
+            if (char && !key.ctrl && !key.meta) {
+                input += char
+                process.stdout.write(char)
+            }
+        }
+
+        readline.emitKeypressEvents(process.stdin)
+
         if (wasPaused) {
             process.stdin.resume()
         }
 
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: true
-        })
-
-        printer.line(chalk.cyan('? ') + message + chalk.gray(' › '), false)
-
-        rl.question('', (answer: string) => {
-            rl.close()
-
-            // Re-enable keypress events after readline closes
-            // This is critical because readline.close() removes keypress listeners
-            readline.emitKeypressEvents(process.stdin)
-
-            // Ensure stdin is resumed and not paused
-            if (!wasPaused) {
-                // If stdin was paused before, keep it paused
-                // Otherwise ensure it's resumed
-                process.stdin.resume()
-            }
-
-            // Restore raw mode if it was enabled
-            if (wasRaw) {
-                (process.stdin as any).setRawMode(true)
-            }
-
-            resolve(answer.trim())
-        })
+        (process.stdin as any).setRawMode(true)
+        process.stdin.on('keypress', onKeypress)
     })
 }
 
 /**
  * Prompt the user for password input (hidden)
  */
-export async function promptPassword(message: string): Promise<string> {
+export async function promptPassword(message: string): Promise<string | null> {
     const { printer } = state
 
     return new Promise((resolve) => {
         const wasRaw = (process.stdin as any).isRaw
         const wasPaused = process.stdin.isPaused()
 
-        if (wasRaw) {
-            (process.stdin as any).setRawMode(false)
-        }
-
-        if (wasPaused) {
-            process.stdin.resume()
-        }
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: true
-        })
-
-        printer.line(chalk.cyan('? ') + message + chalk.gray(' › '), false)
+        printer.line(chalk.cyan('? ') + message + chalk.gray(' (ESC to cancel) › '), false)
 
         let input = ''
 
-        // Manually handle keypress to hide input
-        const onKeypress = (char: string, key: any) => {
-            if (key && key.name === 'return') {
-                process.stdin.removeListener('keypress', onKeypress)
-                rl.close()
-                printer.line('', false)
-
-                readline.emitKeypressEvents(process.stdin)
-
-                if (!wasPaused) {
-                    process.stdin.resume()
-                }
-
-                if (wasRaw) {
-                    (process.stdin as any).setRawMode(true)
-                }
-
-                resolve(input)
-            } else if (key && key.name === 'backspace') {
-                input = input.slice(0, -1)
-            } else if (char && !key.ctrl) {
-                input += char
-            }
-        }
-
-        readline.emitKeypressEvents(process.stdin)
-        process.stdin.on('keypress', onKeypress)
-
-        if (wasRaw) {
-            (process.stdin as any).setRawMode(true)
-        }
-    })
-}
-
-/**
- * Prompt the user to select from options
- */
-export async function promptSelect(message: string, options: string[]): Promise<string> {
-    const { printer } = state
-
-    return new Promise((resolve) => {
-        const wasRaw = (process.stdin as any).isRaw
-        const wasPaused = process.stdin.isPaused()
-
-        if (wasRaw) {
-            (process.stdin as any).setRawMode(false)
-        }
-
-        if (wasPaused) {
-            process.stdin.resume()
-        }
-
-        printer.line(chalk.cyan('? ') + message, false)
-        options.forEach((opt, idx) => {
-            printer.line(chalk.gray(`  ${idx + 1}) ${opt}`), false)
-        })
-        printer.line(chalk.gray('Select (1-' + options.length + '): '), false)
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: true
-        })
-
-        const askAgain = () => {
-            rl.question('', (answer: string) => {
-                const num = parseInt(answer.trim(), 10)
-                if (num >= 1 && num <= options.length) {
-                    rl.close()
-
-                    readline.emitKeypressEvents(process.stdin)
-
-                    if (!wasPaused) {
-                        process.stdin.resume()
-                    }
-
-                    if (wasRaw) {
-                        (process.stdin as any).setRawMode(true)
-                    }
-
-                    resolve(options[num - 1])
-                } else {
-                    printer.line(chalk.red('Invalid selection. Please enter a number between 1 and ' + options.length), false)
-                    askAgain()
-                }
-            })
-        }
-
-        askAgain()
-    })
-}
-
-/**
- * Prompt the user for confirmation (yes/no)
- */
-export async function promptConfirm(message: string, defaultValue: boolean = false): Promise<string> {
-    const { printer } = state
-
-    return new Promise((resolve) => {
-        const wasRaw = (process.stdin as any).isRaw
-        const wasPaused = process.stdin.isPaused()
-
-        if (wasRaw) {
-            (process.stdin as any).setRawMode(false)
-        }
-
-        if (wasPaused) {
-            process.stdin.resume()
-        }
-
-        const defaultText = defaultValue ? 'Y/n' : 'y/N'
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-            terminal: true
-        })
-
-        printer.line(chalk.cyan('? ') + message + chalk.gray(` (${defaultText}) › `), false)
-
-        rl.question('', (answer: string) => {
-            rl.close()
-
+        const cleanup = () => {
+            process.stdin.removeListener('keypress', onKeypress)
             readline.emitKeypressEvents(process.stdin)
 
             if (!wasPaused) {
@@ -250,29 +144,251 @@ export async function promptConfirm(message: string, defaultValue: boolean = fal
             if (wasRaw) {
                 (process.stdin as any).setRawMode(true)
             }
+        }
 
-            const trimmed = answer.trim().toLowerCase()
-            let result: boolean
-
-            if (trimmed === '') {
-                result = defaultValue
-            } else if (trimmed === 'y' || trimmed === 'yes') {
-                result = true
-            } else if (trimmed === 'n' || trimmed === 'no') {
-                result = false
-            } else {
-                result = defaultValue
+        // Manually handle keypress to hide input
+        const onKeypress = (char: string, key: any) => {
+            // Handle ESC to cancel
+            if (key && key.name === 'escape') {
+                cleanup()
+                printer.line('', false)
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
             }
 
-            resolve(result ? 'true' : 'false')
+            // Handle Ctrl+C to cancel
+            if (key && key.ctrl && key.name === 'c') {
+                cleanup()
+                printer.line('', false)
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle return to submit
+            if (key && key.name === 'return') {
+                cleanup()
+                printer.line('', false)
+                resolve(input)
+                return
+            }
+
+            // Handle backspace
+            if (key && key.name === 'backspace') {
+                input = input.slice(0, -1)
+                return
+            }
+
+            // Handle printable characters (hidden)
+            if (char && !key.ctrl && !key.meta) {
+                input += char
+            }
+        }
+
+        readline.emitKeypressEvents(process.stdin)
+
+        if (wasPaused) {
+            process.stdin.resume()
+        }
+
+        (process.stdin as any).setRawMode(true)
+        process.stdin.on('keypress', onKeypress)
+    })
+}
+
+/**
+ * Prompt the user to select from options
+ */
+export async function promptSelect(message: string, options: string[]): Promise<string | null> {
+    const { printer } = state
+
+    return new Promise((resolve) => {
+        const wasRaw = (process.stdin as any).isRaw
+        const wasPaused = process.stdin.isPaused()
+
+        printer.line(chalk.cyan('? ') + message, false)
+        options.forEach((opt, idx) => {
+            printer.line(chalk.gray(`  ${idx + 1}) ${opt}`), false)
         })
+        printer.line(chalk.gray('Select (1-' + options.length + ') or ESC to cancel: '), false)
+
+        let input = ''
+
+        const cleanup = () => {
+            process.stdin.removeListener('keypress', onKeypress)
+            readline.emitKeypressEvents(process.stdin)
+
+            if (!wasPaused) {
+                process.stdin.resume()
+            }
+
+            if (wasRaw) {
+                (process.stdin as any).setRawMode(true)
+            }
+        }
+
+        const onKeypress = (char: string, key: any) => {
+            // Handle ESC to cancel
+            if (key && key.name === 'escape') {
+                cleanup()
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle Ctrl+C to cancel
+            if (key && key.ctrl && key.name === 'c') {
+                cleanup()
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle backspace
+            if (key && key.name === 'backspace') {
+                input = input.slice(0, -1)
+                // Clear line and rewrite prompt with current input
+                process.stdout.write('\r\x1b[K')
+                process.stdout.write(chalk.gray('Select (1-' + options.length + ') or ESC to cancel: ') + input)
+                return
+            }
+
+            // Handle return to submit
+            if (key && key.name === 'return') {
+                const num = parseInt(input.trim(), 10)
+                if (num >= 1 && num <= options.length) {
+                    cleanup()
+                    printer.line('', false)
+                    resolve(options[num - 1])
+                } else {
+                    printer.line('', false)
+                    printer.line(chalk.red('Invalid selection. Please enter a number between 1 and ' + options.length), false)
+                    printer.line(chalk.gray('Select (1-' + options.length + ') or ESC to cancel: '), false)
+                    input = ''
+                }
+                return
+            }
+
+            // Handle numeric input
+            if (char && char >= '0' && char <= '9' && !key.ctrl && !key.meta) {
+                input += char
+                process.stdout.write(char)
+            }
+        }
+
+        readline.emitKeypressEvents(process.stdin)
+
+        if (wasPaused) {
+            process.stdin.resume()
+        }
+
+        (process.stdin as any).setRawMode(true)
+        process.stdin.on('keypress', onKeypress)
+    })
+}
+
+/**
+ * Prompt the user for confirmation (yes/no)
+ */
+export async function promptConfirm(message: string, defaultValue: boolean = false): Promise<string | null> {
+    const { printer } = state
+
+    return new Promise((resolve) => {
+        const wasRaw = (process.stdin as any).isRaw
+        const wasPaused = process.stdin.isPaused()
+
+        const defaultText = defaultValue ? 'Y/n' : 'y/N'
+        printer.line(chalk.cyan('? ') + message + chalk.gray(` (${defaultText}, ESC to cancel) › `), false)
+
+        let input = ''
+
+        const cleanup = () => {
+            process.stdin.removeListener('keypress', onKeypress)
+            readline.emitKeypressEvents(process.stdin)
+
+            if (!wasPaused) {
+                process.stdin.resume()
+            }
+
+            if (wasRaw) {
+                (process.stdin as any).setRawMode(true)
+            }
+        }
+
+        const onKeypress = (char: string, key: any) => {
+            // Handle ESC to cancel
+            if (key && key.name === 'escape') {
+                cleanup()
+                printer.line('', false)
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle Ctrl+C to cancel
+            if (key && key.ctrl && key.name === 'c') {
+                cleanup()
+                printer.line('', false)
+                printer.line(chalk.yellow('Cancelled'), false)
+                resolve(null)
+                return
+            }
+
+            // Handle backspace
+            if (key && key.name === 'backspace') {
+                if (input.length > 0) {
+                    input = input.slice(0, -1)
+                    process.stdout.write('\b \b')
+                }
+                return
+            }
+
+            // Handle return to submit
+            if (key && key.name === 'return') {
+                cleanup()
+                printer.line('', false)
+
+                const trimmed = input.trim().toLowerCase()
+                let result: boolean
+
+                if (trimmed === '') {
+                    result = defaultValue
+                } else if (trimmed === 'y' || trimmed === 'yes') {
+                    result = true
+                } else if (trimmed === 'n' || trimmed === 'no') {
+                    result = false
+                } else {
+                    result = defaultValue
+                }
+
+                resolve(result ? 'true' : 'false')
+                return
+            }
+
+            // Handle printable characters
+            if (char && !key.ctrl && !key.meta) {
+                input += char
+                process.stdout.write(char)
+            }
+        }
+
+        readline.emitKeypressEvents(process.stdin)
+
+        if (wasPaused) {
+            process.stdin.resume()
+        }
+
+        (process.stdin as any).setRawMode(true)
+        process.stdin.on('keypress', onKeypress)
     })
 }
 
 /**
  * Prompt the user based on prompt definition
+ * Returns null if the prompt was cancelled
  */
-export async function promptUser(definition: PromptDefinition): Promise<string> {
+export async function promptUser(definition: PromptDefinition): Promise<string | null> {
     const type = definition.type || 'text'
 
     switch (type) {
@@ -291,12 +407,18 @@ export async function promptUser(definition: PromptDefinition): Promise<string> 
 
 /**
  * Prompt the user for multiple inputs
+ * Returns null if any prompt was cancelled
  */
-export async function promptUserMultiple(prompts: PromptDefinition[]): Promise<PromptResult> {
+export async function promptUserMultiple(prompts: PromptDefinition[]): Promise<PromptResult | null> {
     const result: PromptResult = {}
 
     for (const prompt of prompts) {
-        result[prompt.name] = await promptUser(prompt)
+        const value = await promptUser(prompt)
+        // If user cancelled, return null to indicate cancellation
+        if (value === null) {
+            return null
+        }
+        result[prompt.name] = value
     }
 
     return result

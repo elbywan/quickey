@@ -86,6 +86,11 @@ export class Action extends Item {
                     // Execute step prompts
                     const stepValues = await promptUserMultiple(step.prompts)
 
+                    // If user cancelled, abort action
+                    if (stepValues === null) {
+                        return
+                    }
+
                     // Merge step values into overall prompt values
                     promptValues = { ...promptValues, ...stepValues }
                 }
@@ -100,7 +105,14 @@ export class Action extends Item {
                 const { printer } = state
                 printer.line('', false)
 
-                promptValues = await promptUserMultiple(this._prompts)
+                const values = await promptUserMultiple(this._prompts)
+                
+                // If user cancelled, abort action
+                if (values === null) {
+                    return
+                }
+                
+                promptValues = values
                 if (command) {
                     command = replacePromptPlaceholders(command, promptValues)
                 }
