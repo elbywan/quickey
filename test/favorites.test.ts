@@ -8,13 +8,13 @@ describe('Favorites', () => {
         it('should mark action as favorite', () => {
             const action = new Action('test')
                 .favorite()
-            
+
             assert.strictEqual(action._isFavorite, true)
         })
 
         it('should default to false when not called', () => {
             const action = new Action('test')
-            
+
             assert.strictEqual(action._isFavorite, false)
         })
 
@@ -22,7 +22,7 @@ describe('Favorites', () => {
             const action = new Action('test')
                 .favorite()
                 .shell('echo test')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._shell, 'echo test')
         })
@@ -31,16 +31,16 @@ describe('Favorites', () => {
             const action1 = new Action('test1')
                 .shell('echo test')
                 .favorite()
-            
+
             const action2 = new Action('test2')
                 .favorite()
                 .shell('echo test')
-            
+
             const action3 = new Action('test3')
                 .shell('echo first')
                 .favorite()
                 .then('echo second')
-            
+
             assert.strictEqual(action1._isFavorite, true)
             assert.strictEqual(action2._isFavorite, true)
             assert.strictEqual(action3._isFavorite, true)
@@ -53,7 +53,7 @@ describe('Favorites', () => {
                 .requireConfirmation('Deploy?')
                 .shell('npm run deploy')
                 .notify('Deployed!')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._prompts.length, 1)
             assert.strictEqual(action._confirmMessage, 'Deploy?')
@@ -64,16 +64,16 @@ describe('Favorites', () => {
     describe('Favorite sorting in Quickey', () => {
         it('should keep favorites and non-favorites separate', () => {
             const quickey = new Quickey('Test', 'Description')
-            
+
             quickey.action('Build').shell('npm run build')
             quickey.action('Test').favorite().shell('npm test')
             quickey.action('Deploy').shell('npm run deploy')
             quickey.action('Lint').favorite().shell('npm run lint')
-            
+
             const actions = quickey._items as Action[]
             const favorites = actions.filter(a => a._isFavorite)
             const nonFavorites = actions.filter(a => !a._isFavorite)
-            
+
             assert.strictEqual(favorites.length, 2)
             assert.strictEqual(nonFavorites.length, 2)
             assert.strictEqual(favorites[0]._label, 'Test')
@@ -82,20 +82,20 @@ describe('Favorites', () => {
 
         it('should work with categories', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             const gitCategory = quickey.category('Git').content((q) => {
                 q.action('Pull').favorite().shell('git pull')
                 q.action('Push').shell('git push')
                 q.action('Status').favorite().shell('git status')
             })
-            
+
             // Actions are stored in the category's content, but we can test via keyMap
             assert.ok(gitCategory._content)
         })
 
         it('should work with nested categories', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             const gitCategory = quickey.category('Git').content((q) => {
                 const branchCategory = q.category('Branches').content((q2) => {
                     q2.action('Create').favorite().shell('git checkout -b')
@@ -104,24 +104,24 @@ describe('Favorites', () => {
                 })
                 assert.ok(branchCategory._content)
             })
-            
+
             assert.ok(gitCategory._content)
         })
 
         it('should work with persistent items', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             quickey.action('Regular').shell('echo regular')
             quickey.action('Favorite').favorite().shell('echo favorite')
             quickey.action('Persistent Favorite', true).favorite().shell('echo pfav')
             quickey.action('Persistent', true).shell('echo persistent')
-            
+
             const regularActions = quickey._items as Action[]
             const persistentActions = quickey._persistentItems as Action[]
-            
+
             const regularFavorites = regularActions.filter(a => a._isFavorite)
             const persistentFavorites = persistentActions.filter(a => a._isFavorite)
-            
+
             assert.strictEqual(regularFavorites.length, 1)
             assert.strictEqual(persistentFavorites.length, 1)
         })
@@ -131,20 +131,20 @@ describe('Favorites', () => {
         it('should copy favorite flag from template', () => {
             const template = new Action('template')
                 .favorite()
-            
+
             const action = new Action('test')
                 .fromTemplate(template)
-            
+
             assert.strictEqual(action._isFavorite, true)
         })
 
         it('should not override existing favorite flag', () => {
             const template = new Action('template')
                 .favorite()
-            
+
             const action = new Action('test')
                 .fromTemplate(template)
-            
+
             // Action should have favorite from template
             assert.strictEqual(action._isFavorite, true)
         })
@@ -152,25 +152,25 @@ describe('Favorites', () => {
         it('should allow setting favorite after template', () => {
             const template = new Action('template')
                 .shell('echo template')
-            
+
             const action = new Action('test')
                 .fromTemplate(template)
                 .favorite()
-            
+
             assert.strictEqual(action._isFavorite, true)
         })
 
         it('should work with stored templates', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             const deployTemplate = quickey.template('deploy')
                 .favorite()
                 .env('NODE_ENV', 'production')
                 .shell('npm run deploy')
-            
+
             const deployAction = quickey.action('Deploy Staging')
                 .fromTemplate(quickey.getTemplate('deploy')!)
-            
+
             assert.strictEqual(deployAction._isFavorite, true)
             assert.strictEqual(deployAction._envVars.NODE_ENV, 'production')
         })
@@ -179,12 +179,12 @@ describe('Favorites', () => {
     describe('Favorite with conditions', () => {
         it('should work with conditional actions', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             const action = quickey.action('Dev Only')
                 .favorite()
                 .condition(() => process.env.NODE_ENV === 'development')
                 .shell('npm run dev')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.ok(action._condition)
         })
@@ -193,7 +193,7 @@ describe('Favorites', () => {
             const action = new Action('test')
                 .favorite()
                 .condition(() => true)
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.ok(action._condition)
         })
@@ -206,7 +206,7 @@ describe('Favorites', () => {
                 .before('echo before')
                 .shell('echo main')
                 .after('echo after')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._beforeHooks.length, 1)
             assert.strictEqual(action._afterHooks.length, 1)
@@ -218,7 +218,7 @@ describe('Favorites', () => {
                 .shell('npm test')
                 .then('npm run build')
                 .then('npm run deploy')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._chains.length, 2)
         })
@@ -229,7 +229,7 @@ describe('Favorites', () => {
                 .shell('npm test')
                 .onError('echo "Tests failed!"')
                 .onError(() => console.error('Error'))
-            
+
             assert.strictEqual(action._isFavorite, true)
             const errorHandlers = action._chains.filter(c => c.onError)
             assert.strictEqual(errorHandlers.length, 2)
@@ -243,7 +243,7 @@ describe('Favorites', () => {
                 .prompt('name', 'Enter name')
                 .prompt('email', 'Enter email')
                 .shell('echo {{name}} {{email}}')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._prompts.length, 2)
         })
@@ -255,7 +255,7 @@ describe('Favorites', () => {
                 .confirm('proceed', 'Continue?', false)
                 .password('token', 'API Token')
                 .shell('deploy')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._prompts.length, 3)
         })
@@ -265,7 +265,7 @@ describe('Favorites', () => {
                 .favorite()
                 .requireConfirmation('Are you sure?')
                 .shell('rm -rf data')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._confirmMessage, 'Are you sure?')
         })
@@ -277,7 +277,7 @@ describe('Favorites', () => {
                 .favorite()
                 .in('/path/to/project')
                 .shell('npm test')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._workingDir, '/path/to/project')
         })
@@ -288,7 +288,7 @@ describe('Favorites', () => {
                 .env('NODE_ENV', 'production')
                 .env({ API_KEY: 'secret' })
                 .shell('npm start')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._envVars.NODE_ENV, 'production')
             assert.strictEqual(action._envVars.API_KEY, 'secret')
@@ -300,7 +300,7 @@ describe('Favorites', () => {
                 .capture()
                 .silent()
                 .shell('git rev-parse HEAD')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._silentOutput, true)
@@ -311,7 +311,7 @@ describe('Favorites', () => {
                 .favorite()
                 .shell('npm run build')
                 .notify('Build completed!')
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.strictEqual(action._notifyMessage, 'Build completed!')
         })
@@ -320,7 +320,7 @@ describe('Favorites', () => {
             const action = new Action('test')
                 .favorite()
                 .javascript(() => console.log('Running'))
-            
+
             assert.strictEqual(action._isFavorite, true)
             assert.ok(action._code)
         })
@@ -329,18 +329,18 @@ describe('Favorites', () => {
     describe('Multiple favorites', () => {
         it('should handle multiple favorite actions', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             quickey.action('A').shell('echo a')
             quickey.action('B').favorite().shell('echo b')
             quickey.action('C').shell('echo c')
             quickey.action('D').favorite().shell('echo d')
             quickey.action('E').favorite().shell('echo e')
             quickey.action('F').shell('echo f')
-            
+
             const actions = quickey._items as Action[]
             const favorites = actions.filter(a => a._isFavorite)
             const nonFavorites = actions.filter(a => !a._isFavorite)
-            
+
             assert.strictEqual(favorites.length, 3)
             assert.strictEqual(nonFavorites.length, 3)
             assert.strictEqual(favorites[0]._label, 'B')
@@ -350,27 +350,27 @@ describe('Favorites', () => {
 
         it('should handle all actions as favorites', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             quickey.action('A').favorite().shell('echo a')
             quickey.action('B').favorite().shell('echo b')
             quickey.action('C').favorite().shell('echo c')
-            
+
             const actions = quickey._items as Action[]
             const favorites = actions.filter(a => a._isFavorite)
-            
+
             assert.strictEqual(favorites.length, 3)
         })
 
         it('should handle no favorite actions', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             quickey.action('A').shell('echo a')
             quickey.action('B').shell('echo b')
             quickey.action('C').shell('echo c')
-            
+
             const actions = quickey._items as Action[]
             const favorites = actions.filter(a => a._isFavorite)
-            
+
             assert.strictEqual(favorites.length, 0)
         })
     })
@@ -379,7 +379,7 @@ describe('Favorites', () => {
         it('should work with empty action', () => {
             const action = new Action('test')
                 .favorite()
-            
+
             assert.strictEqual(action._isFavorite, true)
         })
 
@@ -388,25 +388,25 @@ describe('Favorites', () => {
                 .favorite()
                 .favorite()
                 .favorite()
-            
+
             assert.strictEqual(action._isFavorite, true)
         })
 
         it('should work with complex nested structure', () => {
             const quickey = new Quickey('Main', 'Main menu')
-            
+
             // Create actions directly and mark favorites
             const action1 = new Action('Up')
                 .favorite()
                 .shell('docker-compose up')
-            
+
             const action2 = new Action('Down')
                 .shell('docker-compose down')
-            
+
             const action3 = new Action('Logs')
                 .favorite()
                 .shell('docker-compose logs')
-            
+
             // Verify that favorites work within category content callbacks
             quickey.category('Docker').content(docker => {
                 docker.category('Compose').content(compose => {
@@ -415,7 +415,7 @@ describe('Favorites', () => {
                     compose.action('Logs').favorite().shell('docker-compose logs')
                 })
             })
-            
+
             // Test the actions we created
             assert.strictEqual(action1._isFavorite, true)
             assert.strictEqual(action2._isFavorite, false)

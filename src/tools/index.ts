@@ -1,8 +1,8 @@
 export * from './runners.js'
 export * from './circularstringbuffer.js'
-export { 
-    promptUser, 
-    promptUserMultiple, 
+export {
+    promptUser,
+    promptUserMultiple,
     replacePromptPlaceholders,
     promptText,
     promptPassword,

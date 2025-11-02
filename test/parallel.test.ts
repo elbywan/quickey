@@ -25,7 +25,7 @@ describe('Parallel Execution', () => {
             const action = new Action('test')
             const fn1 = () => console.log('task1')
             const fn2 = () => console.log('task2')
-            
+
             action.parallel([fn1, fn2])
 
             assert.strictEqual(action._parallelTasks.length, 2)
@@ -38,7 +38,7 @@ describe('Parallel Execution', () => {
         it('should mix shell and javascript tasks', () => {
             const action = new Action('test')
             const fn = () => console.log('js task')
-            
+
             action.parallel([
                 'echo "shell task"',
                 fn,
@@ -265,7 +265,7 @@ describe('Parallel Execution', () => {
         it('should support large number of parallel tasks', () => {
             const action = new Action('test')
             const tasks = Array.from({ length: 20 }, (_, i) => `echo "task${i}"`)
-            
+
             action.parallel(tasks)
 
             assert.strictEqual(action._parallelTasks.length, 20)
@@ -327,7 +327,7 @@ describe('Parallel Execution', () => {
         it('should support mixed task types', () => {
             const action = new Action('Complex Pipeline')
             const customTask = () => 'Custom validation'
-            
+
             action.parallel([
                 'npm run lint',
                 'npm run format:check',

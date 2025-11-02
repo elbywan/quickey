@@ -85,7 +85,7 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                 }
                 process.exit(0)
             }
-            
+
             // Handle help mode input
             if(state.helpMode) {
                 // Check if user pressed escape to exit help mode
@@ -94,7 +94,7 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                     printer.clear()
                     continue
                 }
-                
+
                 // Try to find item by key press
                 const helpItem = keyMap.get(keyPress)
                 if(helpItem && (helpItem as any)._helpText) {
@@ -103,16 +103,16 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                     printer.line()
                     printer.line('  ' + chalk.bold.cyan('Help: ' + helpItem._label))
                     printer.line()
-                    
+
                     const helpText = (helpItem as any)._helpText
                     // Split by lines and display with indentation
                     helpText.split('\n').forEach((line: string) => {
                         printer.line('  ' + line, false)
                     })
-                    
+
                     printer.line()
                     printer.line('  ' + chalk.gray('Press any key to return...'), false)
-                    
+
                     // Wait for any key press to return
                     state.helpMode = false
                     process.stdin.once('keypress', () => {
@@ -143,14 +143,14 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                     // Exit search or execute special command
                     break
                 }
-                
+
                 // Handle backspace in search
                 if(keyEvent.name === 'backspace') {
                     state.searchQuery = state.searchQuery.slice(0, -1)
                     printer.clear()
                     continue
                 }
-                
+
                 // Handle return to execute first match
                 if(keyEvent.name === 'return') {
                     const firstItem = keyMap.values().next().value
@@ -161,7 +161,7 @@ export async function * mainLoop (keyListener: KeyListener): AsyncGenerator<Gene
                         break
                     }
                 }
-                
+
                 // Add printable characters to search query
                 if(keyPress && keyPress.length === 1 && !keyEvent.ctrl && !keyEvent.meta) {
                     state.searchQuery += keyPress

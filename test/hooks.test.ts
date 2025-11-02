@@ -165,7 +165,7 @@ describe('Lifecycle Hooks', () => {
 
             const beforeShells = action._beforeHooks.map(h => h.shell)
             const afterShells = action._afterHooks.map(h => h.shell)
-            
+
             assert.deepStrictEqual(beforeShells, ['before1', 'before2', 'before3'])
             assert.deepStrictEqual(afterShells, ['after1', 'after2', 'after3'])
         })
@@ -415,13 +415,13 @@ describe('Lifecycle Hooks', () => {
         it('should handle many hooks', () => {
             const action = new Action('test')
             action.before('before1')
-            
+
             for (let i = 2; i <= 20; i++) {
                 action.before(`before${i}`)
             }
-            
+
             action.shell('main')
-            
+
             for (let i = 1; i <= 20; i++) {
                 action.after(`after${i}`)
             }

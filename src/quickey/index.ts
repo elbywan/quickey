@@ -115,7 +115,7 @@ export class Quickey {
         if (!query || query.trim() === '') {
             return items
         }
-        
+
         const lowerQuery = query.trim().toLowerCase()
         return items.filter(item => {
             const labelMatch = item._label.toLowerCase().includes(lowerQuery)
@@ -182,12 +182,12 @@ export class Quickey {
         };
 
         let allItems = [...this._items, ...this._persistentItems].filter(filterByCondition)
-        
+
         // Apply search filter if query provided
         if (searchQuery) {
             allItems = this._filterItemsBySearch(allItems, searchQuery)
         }
-        
+
         allItems
             .reduce(fillRegularKeysAndFilter, [])
             .forEach(fillAlternativeKeys)

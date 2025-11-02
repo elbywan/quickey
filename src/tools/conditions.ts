@@ -46,8 +46,8 @@ export function fileExists(path: string): () => boolean {
 export function commandExists(command: string): () => boolean {
     return () => {
         try {
-            const checkCmd = process.platform === 'win32' 
-                ? `where ${command}` 
+            const checkCmd = process.platform === 'win32'
+                ? `where ${command}`
                 : `command -v ${command}`
             execSync(checkCmd, { stdio: 'ignore' })
             return true

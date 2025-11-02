@@ -107,9 +107,9 @@ export function addToHistory(label: string, command: string, type: 'shell' | 'ja
         type,
         exitCode
     }
-    
+
     state.commandHistory.unshift(entry)
-    
+
     // Keep only the most recent MAX_HISTORY_SIZE entries
     if (state.commandHistory.length > MAX_HISTORY_SIZE) {
         state.commandHistory.length = MAX_HISTORY_SIZE

@@ -26,7 +26,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .in('/first/path')
                 .in('/second/path')
-            
+
             assert.strictEqual(action._workingDir, '/second/path')
         })
 
@@ -51,7 +51,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .in('/path/to/project')
                 .shell('npm test')
-            
+
             assert.strictEqual(action._workingDir, '/path/to/project')
             assert.strictEqual(action._shell, 'npm test')
         })
@@ -60,7 +60,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .in('./backend')
                 .shell('npm run build && npm test')
-            
+
             assert.strictEqual(action._workingDir, './backend')
         })
 
@@ -69,7 +69,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .in(longPath)
                 .shell('ls -la')
-            
+
             assert.strictEqual(action._workingDir, longPath)
         })
     })
@@ -80,7 +80,7 @@ describe('Working Directory (in() method)', () => {
                 .prompt('dir', 'Enter directory')
                 .in('{{dir}}')
                 .shell('ls -la')
-            
+
             assert.strictEqual(action._workingDir, '{{dir}}')
         })
 
@@ -90,14 +90,14 @@ describe('Working Directory (in() method)', () => {
                 .prompt('env', 'Environment')
                 .in('./projects/{{project}}/{{env}}')
                 .shell('npm start')
-            
+
             assert.strictEqual(action._workingDir, './projects/{{project}}/{{env}}')
         })
 
         it('should verify placeholder replacement works with paths', () => {
             const pathWithPlaceholder = './projects/{{name}}'
             const promptValues = { name: 'my-app' }
-            
+
             const result = replacePromptPlaceholders(pathWithPlaceholder, promptValues)
             assert.strictEqual(result, './projects/my-app')
         })
@@ -109,9 +109,9 @@ describe('Working Directory (in() method)', () => {
                 .prompt('branch', 'Branch')
                 .in('/repos/{{org}}/{{repo}}/{{branch}}')
                 .shell('git status')
-            
+
             assert.strictEqual(action._workingDir, '/repos/{{org}}/{{repo}}/{{branch}}')
-            
+
             // Test that replacement would work correctly
             const result = replacePromptPlaceholders(
                 action._workingDir!,
@@ -125,7 +125,7 @@ describe('Working Directory (in() method)', () => {
                 .select('env', 'Environment', ['dev', 'staging', 'prod'])
                 .in('./environments/{{env}}')
                 .shell('npm run build')
-            
+
             assert.strictEqual(action._workingDir, './environments/{{env}}')
         })
 
@@ -134,7 +134,7 @@ describe('Working Directory (in() method)', () => {
                 .prompt('version', 'Version')
                 .in('/releases/v{{version}}/build')
                 .shell('make')
-            
+
             assert.strictEqual(action._workingDir, '/releases/v{{version}}/build')
         })
     })
@@ -146,7 +146,7 @@ describe('Working Directory (in() method)', () => {
                 .shell('npm install')
                 .then('npm test')
                 .then('npm run build')
-            
+
             assert.strictEqual(action._workingDir, './backend')
             assert.strictEqual(action._chains.length, 2)
         })
@@ -156,7 +156,7 @@ describe('Working Directory (in() method)', () => {
                 .in('/app')
                 .shell('npm test')
                 .onError('echo "Tests failed"')
-            
+
             assert.strictEqual(action._workingDir, '/app')
             assert.strictEqual(action._chains.length, 1)
         })
@@ -168,7 +168,7 @@ describe('Working Directory (in() method)', () => {
                 .then('npm install')
                 .then('npm run build')
                 .onError('npm run rollback')
-            
+
             assert.strictEqual(action._workingDir, './project')
             assert.strictEqual(action._chains.length, 3)
         })
@@ -180,7 +180,7 @@ describe('Working Directory (in() method)', () => {
                 .in('./app')
                 .before('npm install')
                 .shell('npm test')
-            
+
             assert.strictEqual(action._workingDir, './app')
             assert.strictEqual(action._beforeHooks.length, 1)
         })
@@ -190,7 +190,7 @@ describe('Working Directory (in() method)', () => {
                 .in('./app')
                 .shell('npm test')
                 .after('npm run coverage')
-            
+
             assert.strictEqual(action._workingDir, './app')
             assert.strictEqual(action._afterHooks.length, 1)
         })
@@ -203,7 +203,7 @@ describe('Working Directory (in() method)', () => {
                 .shell('npm test')
                 .after('echo "Done"')
                 .after('npm run cleanup')
-            
+
             assert.strictEqual(action._workingDir, '/project')
             assert.strictEqual(action._beforeHooks.length, 2)
             assert.strictEqual(action._afterHooks.length, 2)
@@ -216,7 +216,7 @@ describe('Working Directory (in() method)', () => {
                 .in('./backend')
                 .env('NODE_ENV', 'production')
                 .shell('npm start')
-            
+
             assert.strictEqual(action._workingDir, './backend')
             assert.strictEqual(action._envVars['NODE_ENV'], 'production')
         })
@@ -230,7 +230,7 @@ describe('Working Directory (in() method)', () => {
                     LOG_LEVEL: 'info'
                 })
                 .shell('node server.js')
-            
+
             assert.strictEqual(action._workingDir, '/app')
             assert.strictEqual(Object.keys(action._envVars).length, 3)
         })
@@ -242,7 +242,7 @@ describe('Working Directory (in() method)', () => {
                 .in('{{dir}}')
                 .env('NODE_ENV', '{{env}}')
                 .shell('npm start')
-            
+
             assert.strictEqual(action._workingDir, '{{dir}}')
             assert.strictEqual(action._envVars['NODE_ENV'], '{{env}}')
         })
@@ -254,7 +254,7 @@ describe('Working Directory (in() method)', () => {
                 .in('/production')
                 .requireConfirmation('Deploy to production?')
                 .shell('npm run deploy')
-            
+
             assert.strictEqual(action._workingDir, '/production')
             assert.strictEqual(action._confirmMessage, 'Deploy to production?')
         })
@@ -265,7 +265,7 @@ describe('Working Directory (in() method)', () => {
                 .in('{{target}}')
                 .requireConfirmation('Are you sure?')
                 .shell('rm -rf data')
-            
+
             assert.strictEqual(action._workingDir, '{{target}}')
             assert.strictEqual(action._confirmMessage, 'Are you sure?')
         })
@@ -276,7 +276,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .in('./scripts')
                 .javascript(() => console.log('Running script'))
-            
+
             assert.strictEqual(action._workingDir, './scripts')
             assert.ok(action._code)
         })
@@ -286,7 +286,7 @@ describe('Working Directory (in() method)', () => {
                 .in('./app')
                 .shell('npm install')
                 .then(() => console.log('Installed'))
-            
+
             assert.strictEqual(action._workingDir, './app')
             assert.strictEqual(action._chains.length, 1)
             assert.strictEqual(action._chains[0].type, 'javascript')
@@ -299,7 +299,7 @@ describe('Working Directory (in() method)', () => {
             q.action('Build Backend')
                 .in('./backend')
                 .shell('npm run build')
-            
+
             const action = q._items[0] as Action
             assert.strictEqual(action._workingDir, './backend')
         })
@@ -314,7 +314,7 @@ describe('Working Directory (in() method)', () => {
                 .shell('npm run build')
                 .then('npm test')
                 .after('npm run deploy')
-            
+
             assert.strictEqual(action._workingDir, '{{dir}}/{{env}}')
             assert.strictEqual(action._envVars['NODE_ENV'], '{{env}}')
             assert.strictEqual(action._beforeHooks.length, 1)
@@ -327,7 +327,7 @@ describe('Working Directory (in() method)', () => {
                 .in('/custom/path')
                 .shellOptions({ shell: '/bin/bash' })
                 .shell('echo test')
-            
+
             assert.strictEqual(action._workingDir, '/custom/path')
             assert.strictEqual(action._shellOptions.shell, '/bin/bash')
         })
@@ -391,7 +391,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .in('./app')
                 .shell('npm test')
-            
+
             assert.strictEqual(action._workingDir, './app')
             assert.strictEqual(action._shell, 'npm test')
         })
@@ -400,7 +400,7 @@ describe('Working Directory (in() method)', () => {
             const action = new Action('test')
                 .shell('npm test')
                 .in('./app')
-            
+
             assert.strictEqual(action._workingDir, './app')
             assert.strictEqual(action._shell, 'npm test')
         })
@@ -412,7 +412,7 @@ describe('Working Directory (in() method)', () => {
                 .in('{{dir}}')
                 .requireConfirmation('Continue?')
                 .shell('npm test')
-            
+
             assert.strictEqual(action._workingDir, '{{dir}}')
             assert.strictEqual(action._envVars['TEST'], 'value')
             assert.strictEqual(action._confirmMessage, 'Continue?')
@@ -434,7 +434,7 @@ describe('Working Directory (in() method)', () => {
                 .then('echo "Success"')
                 .onError('echo "Failed"')
                 .after((code) => console.log('Exit code:', code))
-            
+
             assert.strictEqual(action._workingDir, './{{project}}')
             assert.strictEqual(action._prompts.length, 3)
             assert.strictEqual(Object.keys(action._envVars).length, 2)

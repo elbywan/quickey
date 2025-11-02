@@ -136,9 +136,9 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: true,
-                useScriptComments: true 
+                useScriptComments: true
             } as any)
             await loadFn(quickey)
 
@@ -180,9 +180,9 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: true,
-                useScriptComments: true 
+                useScriptComments: true
             } as any)
             await loadFn(quickey)
 
@@ -196,9 +196,9 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: false,
-                useScriptComments: false 
+                useScriptComments: false
             } as any)
             await loadFn(quickey)
 
@@ -215,9 +215,9 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: true,
-                useScriptComments: true 
+                useScriptComments: true
             } as any)
             await loadFn(quickey)
 
@@ -236,7 +236,7 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: true,
                 useScriptComments: true,
                 include: ['test', 'test:unit', 'test:integration']
@@ -257,7 +257,7 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: true,
                 useScriptComments: true,
                 exclude: ['test', 'test:unit', 'test:integration', 'test:e2e']
@@ -278,7 +278,7 @@ describe('Enhanced npm Scripts Integration', () => {
             assert.ok(loader, 'package.json loader should exist')
 
             const packagePath = path.join(fixturesPath, 'package-with-groups.json')
-            const loadFn = loader.load(packagePath, { 
+            const loadFn = loader.load(packagePath, {
                 groupByPrefix: true,
                 aliases: { 'start': 's', 'test:unit': 'u' }
             } as any)

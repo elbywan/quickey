@@ -19,13 +19,13 @@ describe('Conditional Actions', () => {
             quickey.action('Always Hidden')
                 .shell('echo "hidden"')
                 .condition(() => false)
-            
+
             quickey.action('Always Shown')
                 .shell('echo "shown"')
                 .condition(() => true)
 
             const keyMap = quickey._getKeyMap()
-            
+
             // Only the "Always Shown" action should be in the keyMap
             assert.strictEqual(keyMap.size, 1)
             assert.ok(keyMap.has('a'))
@@ -39,7 +39,7 @@ describe('Conditional Actions', () => {
                 .condition(() => true)
 
             const keyMap = quickey._getKeyMap()
-            
+
             assert.strictEqual(keyMap.size, 1)
             assert.ok(keyMap.has('v'))
         })
@@ -50,7 +50,7 @@ describe('Conditional Actions', () => {
                 .shell('echo "test"')
 
             const keyMap = quickey._getKeyMap()
-            
+
             assert.strictEqual(keyMap.size, 1)
             assert.ok(keyMap.has('n'))
         })
@@ -64,7 +64,7 @@ describe('Conditional Actions', () => {
                 })
 
             const keyMap = quickey._getKeyMap()
-            
+
             assert.strictEqual(keyMap.size, 0)
         })
 
@@ -75,7 +75,7 @@ describe('Conditional Actions', () => {
                 .content(q => {
                     q.action('Child Action').shell('echo "test"')
                 })
-            
+
             quickey.category('Visible Category')
                 .condition(() => true)
                 .content(q => {
@@ -83,7 +83,7 @@ describe('Conditional Actions', () => {
                 })
 
             const keyMap = quickey._getKeyMap()
-            
+
             // Only the visible category should be shown
             assert.strictEqual(keyMap.size, 1)
             assert.ok(keyMap.has('v'))
@@ -95,13 +95,13 @@ describe('Conditional Actions', () => {
             quickey.action('Hidden Persistent', true)
                 .shell('echo "hidden"')
                 .condition(() => false)
-            
+
             quickey.action('Visible Persistent', true)
                 .shell('echo "shown"')
                 .condition(() => true)
 
             const keyMap = quickey._getKeyMap()
-            
+
             assert.strictEqual(keyMap.size, 1)
             assert.ok(keyMap.has('v'))
         })
@@ -112,14 +112,14 @@ describe('Conditional Actions', () => {
                 .key('f')
                 .shell('echo "first"')
                 .condition(() => true)
-            
+
             quickey.action('Second')
                 .key('s')
                 .shell('echo "second"')
                 .condition(() => true)
 
             const keyMap = quickey._getKeyMap()
-            
+
             assert.strictEqual(keyMap.size, 2)
             assert.ok(keyMap.has('f'))
             assert.ok(keyMap.has('s'))
@@ -130,17 +130,17 @@ describe('Conditional Actions', () => {
             quickey.action('Test 1')
                 .shell('echo "1"')
                 .condition(() => true)
-            
+
             quickey.action('Test 2')
                 .shell('echo "2"')
                 .condition(() => false)  // This one is hidden
-            
+
             quickey.action('Test 3')
                 .shell('echo "3"')
                 .condition(() => true)
 
             const keyMap = quickey._getKeyMap()
-            
+
             // Only Test 1 and Test 3 should be shown
             assert.strictEqual(keyMap.size, 2)
             assert.ok(keyMap.has('t'))  // Test 1 gets 't'
@@ -164,7 +164,7 @@ describe('Conditional Actions', () => {
 
         it('should work in action conditions', () => {
             process.env.SHOW_ACTION = 'yes'
-            
+
             const quickey = new Quickey('test')
             quickey.action('Conditional')
                 .shell('echo "test"')
@@ -172,7 +172,7 @@ describe('Conditional Actions', () => {
 
             const keyMap = quickey._getKeyMap()
             assert.strictEqual(keyMap.size, 1)
-            
+
             delete process.env.SHOW_ACTION
         })
     })
@@ -198,12 +198,12 @@ describe('Conditional Actions', () => {
 
         it('should work in action conditions', () => {
             process.env.NODE_ENV = 'test'
-            
+
             const quickey = new Quickey('test')
             quickey.action('Test Only')
                 .shell('echo "test"')
                 .condition(envEquals('NODE_ENV', 'test'))
-            
+
             quickey.action('Production Only')
                 .shell('echo "prod"')
                 .condition(envEquals('NODE_ENV', 'production'))
@@ -230,7 +230,7 @@ describe('Conditional Actions', () => {
             quickey.action('Package.json exists')
                 .shell('cat package.json')
                 .condition(fileExists('package.json'))
-            
+
             quickey.action('Missing file')
                 .shell('echo "missing"')
                 .condition(fileExists('missing.txt'))
@@ -257,7 +257,7 @@ describe('Conditional Actions', () => {
             quickey.action('Run Node')
                 .shell('node --version')
                 .condition(commandExists('node'))
-            
+
             quickey.action('Run Missing')
                 .shell('missing-command')
                 .condition(commandExists('missing-command-xyz'))
@@ -284,7 +284,7 @@ describe('Conditional Actions', () => {
             quickey.action('Success Command')
                 .shell('echo "works"')
                 .condition(commandSucceeds('echo test'))
-            
+
             quickey.action('Fail Command')
                 .shell('echo "fail"')
                 .condition(commandSucceeds('exit 1'))
@@ -357,7 +357,7 @@ describe('Conditional Actions', () => {
 
         it('should work in action conditions', () => {
             process.env.AND_ACTION = 'yes'
-            
+
             const quickey = new Quickey('test')
             quickey.action('Both Required')
                 .shell('echo "both"')
@@ -365,7 +365,7 @@ describe('Conditional Actions', () => {
                     envExists('AND_ACTION'),
                     fileExists('package.json')
                 ))
-            
+
             quickey.action('One Missing')
                 .shell('echo "missing"')
                 .condition(and(
@@ -376,7 +376,7 @@ describe('Conditional Actions', () => {
             const keyMap = quickey._getKeyMap()
             assert.strictEqual(keyMap.size, 1)
             assert.strictEqual(keyMap.get('b')?._label, 'Both Required')
-            
+
             delete process.env.AND_ACTION
         })
     })
@@ -416,7 +416,7 @@ describe('Conditional Actions', () => {
                     envExists('MISSING'),
                     fileExists('package.json')
                 ))
-            
+
             quickey.action('Both Missing')
                 .shell('echo "both missing"')
                 .condition(or(
@@ -433,7 +433,7 @@ describe('Conditional Actions', () => {
     describe('Complex condition scenarios', () => {
         it('should handle nested logical operators', () => {
             process.env.NESTED_TEST = 'dev'
-            
+
             const condition = and(
                 or(
                     envEquals('NESTED_TEST', 'dev'),
@@ -441,16 +441,16 @@ describe('Conditional Actions', () => {
                 ),
                 fileExists('package.json')
             )
-            
+
             assert.strictEqual(condition(), true)
             delete process.env.NESTED_TEST
         })
 
         it('should handle complex action visibility rules', () => {
             process.env.NODE_ENV = 'development'
-            
+
             const quickey = new Quickey('test')
-            
+
             // Show only in development with git
             quickey.action('Dev Git')
                 .shell('git status')
@@ -458,7 +458,7 @@ describe('Conditional Actions', () => {
                     envEquals('NODE_ENV', 'development'),
                     commandExists('git')
                 ))
-            
+
             // Show in development OR test
             quickey.action('Dev or Test')
                 .shell('npm test')
@@ -466,19 +466,19 @@ describe('Conditional Actions', () => {
                     envEquals('NODE_ENV', 'development'),
                     envEquals('NODE_ENV', 'test')
                 ))
-            
+
             // Show when NOT in production
             quickey.action('Not Production')
                 .shell('echo "safe"')
                 .condition(not(envEquals('NODE_ENV', 'production')))
-            
+
             // Show only in production
             quickey.action('Production Only')
                 .shell('npm run deploy')
                 .condition(envEquals('NODE_ENV', 'production'))
 
             const keyMap = quickey._getKeyMap()
-            
+
             // Should show: Dev Git, Dev or Test, Not Production (3 items)
             assert.strictEqual(keyMap.size, 3)
             assert.ok(keyMap.has('d'))  // Dev Git or Dev or Test
@@ -487,7 +487,7 @@ describe('Conditional Actions', () => {
 
         it('should re-evaluate conditions on each getKeyMap call', () => {
             const quickey = new Quickey('test')
-            
+
             let toggle = true
             quickey.action('Toggleable')
                 .shell('echo "test"')
@@ -496,12 +496,12 @@ describe('Conditional Actions', () => {
             // First call - should show
             let keyMap = quickey._getKeyMap()
             assert.strictEqual(keyMap.size, 1)
-            
+
             // Toggle off
             toggle = false
             keyMap = quickey._getKeyMap()
             assert.strictEqual(keyMap.size, 0)
-            
+
             // Toggle back on
             toggle = true
             keyMap = quickey._getKeyMap()
@@ -510,7 +510,7 @@ describe('Conditional Actions', () => {
 
         it('should handle conditions with side effects gracefully', () => {
             let callCount = 0
-            
+
             const quickey = new Quickey('test')
             quickey.action('With Side Effects')
                 .shell('echo "test"')
@@ -520,7 +520,7 @@ describe('Conditional Actions', () => {
                 })
 
             quickey._getKeyMap()
-            
+
             // Condition should be called at least once
             assert.ok(callCount > 0)
         })

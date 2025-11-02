@@ -579,7 +579,7 @@ describe('Watch Mode', () => {
             assert.strictEqual(action._watchOptions?.files, undefined)
 
             action.watchFiles(['src/'])
-            
+
             assert.strictEqual(action._watchOptions?.interval, undefined)
             assert.deepStrictEqual(action._watchOptions?.files, ['src/'])
         })

@@ -170,7 +170,7 @@ describe('Search functionality', () => {
             state.searchMode = true
             state.searchQuery = 'test'
             assert.strictEqual(state.searchQuery, 'test')
-            
+
             // Reset
             state.searchMode = false
             state.searchQuery = ''
@@ -180,7 +180,7 @@ describe('Search functionality', () => {
             state.searchMode = false
             state.searchMode = true
             assert.strictEqual(state.searchMode, true)
-            
+
             state.searchMode = false
             assert.strictEqual(state.searchMode, false)
         })

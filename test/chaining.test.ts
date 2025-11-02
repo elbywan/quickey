@@ -319,7 +319,7 @@ describe('Command Chaining', () => {
         it('should handle long chains', () => {
             const action = new Action('test')
             action.shell('start')
-            
+
             for (let i = 0; i < 50; i++) {
                 action.then(`cmd${i}`)
             }

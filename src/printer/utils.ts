@@ -45,7 +45,7 @@ export function printScreen(keyMap?: Map<string, Item>): void {
         .line()
 
     const itemsList = Array.from(keyMap || new Map())
-    
+
     // Separate favorites from non-favorites for regular items
     const regularItemsFavorite = itemsList
         .filter(([, item]) => !item._persistent && (item as any)._isFavorite)
@@ -53,7 +53,7 @@ export function printScreen(keyMap?: Map<string, Item>): void {
     const regularItems = itemsList
         .filter(([, item]) => !item._persistent && !(item as any)._isFavorite)
         .sort((a, b) => a[1]._label.toLowerCase() > b[1]._label.toLowerCase() ? 1 : -1)
-    
+
     // Separate favorites from non-favorites for persistent items
     const persistentItemsFavorite = itemsList
         .filter(([, item]) => item._persistent && (item as any)._isFavorite)
@@ -71,7 +71,7 @@ export function printScreen(keyMap?: Map<string, Item>): void {
     // Favorite items first, then regular items //
     regularItemsFavorite.forEach(entry => printItem(entry, true))
     regularItems.forEach(entry => printItem(entry, false))
-    
+
     // Persistant items & categories (favorites first if any) //
     if (persistentItemsFavorite.length > 0 || persistentItems.length > 0) {
         printer.line()

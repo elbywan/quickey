@@ -40,13 +40,13 @@ export class Item {
 
     /**
      * Set a condition function that determines if this item should be shown
-     * 
+     *
      * @param fn - Function that returns true to show the item, false to hide it
-     * 
+     *
      * @example
      * // Show only if environment variable is set
      * action.condition(() => !!process.env.NODE_ENV)
-     * 
+     *
      * // Show only in development
      * action.condition(() => process.env.NODE_ENV === 'development')
      */

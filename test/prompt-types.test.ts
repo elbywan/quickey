@@ -1,10 +1,10 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import type { 
+import type {
     PromptDefinition,
     SelectPromptDefinition,
     ConfirmPromptDefinition,
-    PasswordPromptDefinition 
+    PasswordPromptDefinition
 } from '../dist/tools/prompt.js'
 
 describe('Prompt Types', () => {
@@ -176,7 +176,7 @@ describe('Prompt Types', () => {
     describe('Prompt Placeholder Compatibility', () => {
         it('should work with existing placeholder replacement', async () => {
             const { replacePromptPlaceholders } = await import('../dist/tools/prompt.js')
-            
+
             // Test with select result
             const selectResult = { env: 'production' }
             const command1 = 'deploy --env {{env}}'
@@ -204,17 +204,17 @@ describe('Prompt Types', () => {
 
         it('should handle multiple different prompt types in one command', async () => {
             const { replacePromptPlaceholders } = await import('../dist/tools/prompt.js')
-            
+
             const values = {
                 username: 'john',
                 password: 'secret',
                 env: 'staging',
                 force: 'true'
             }
-            
+
             const command = 'deploy -u {{username}} -p {{password}} -e {{env}} {{force}}'
             const expected = 'deploy -u john -p secret -e staging true'
-            
+
             assert.strictEqual(replacePromptPlaceholders(command, values), expected)
         })
     })

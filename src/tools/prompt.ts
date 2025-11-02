@@ -28,10 +28,10 @@ export interface PasswordPromptDefinition extends BasePromptDefinition {
     type: 'password'
 }
 
-export type PromptDefinition = 
-    | TextPromptDefinition 
-    | SelectPromptDefinition 
-    | ConfirmPromptDefinition 
+export type PromptDefinition =
+    | TextPromptDefinition
+    | SelectPromptDefinition
+    | ConfirmPromptDefinition
     | PasswordPromptDefinition
 
 export interface PromptResult {
@@ -118,7 +118,7 @@ export async function promptPassword(message: string): Promise<string> {
         printer.line(chalk.cyan('? ') + message + chalk.gray(' › '), false)
 
         let input = ''
-        
+
         // Manually handle keypress to hide input
         const onKeypress = (char: string, key: any) => {
             if (key && key.name === 'return') {
@@ -146,7 +146,7 @@ export async function promptPassword(message: string): Promise<string> {
 
         readline.emitKeypressEvents(process.stdin)
         process.stdin.on('keypress', onKeypress)
-        
+
         if (wasRaw) {
             (process.stdin as any).setRawMode(true)
         }

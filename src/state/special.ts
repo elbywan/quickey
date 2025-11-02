@@ -40,18 +40,18 @@ export const specialCommands = [
         action: () => {
             const quickey = push('Command History', 'Recently executed commands. Select to re-run.')
             quickey._id = 'command-history'
-            
+
             const history = getHistory()
             history.forEach((entry) => {
                 const date = new Date(entry.timestamp)
                 const timeStr = date.toLocaleTimeString()
                 const exitSymbol = entry.exitCode === 0 ? '✓' : '✗'
                 const typeSymbol = entry.type === 'shell' ? '$' : 'js'
-                
+
                 const description = `${exitSymbol} [${typeSymbol}] ${timeStr} - ${entry.command}`
-                
+
                 const action = quickey.action(entry.label).description(description)
-                
+
                 if (entry.type === 'shell') {
                     action.shell(entry.command)
                 } else {

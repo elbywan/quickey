@@ -27,7 +27,7 @@ describe('Environment Variables', () => {
                 .env('VAR1', 'value1')
                 .env('VAR2', 'value2')
                 .env({ VAR3: 'value3', VAR4: 'value4' })
-            
+
             assert.strictEqual(action._envVars['VAR1'], 'value1')
             assert.strictEqual(action._envVars['VAR2'], 'value2')
             assert.strictEqual(action._envVars['VAR3'], 'value3')
@@ -38,7 +38,7 @@ describe('Environment Variables', () => {
             const action = new Action('test')
                 .env('NODE_ENV', 'development')
                 .env('NODE_ENV', 'production')
-            
+
             assert.strictEqual(action._envVars['NODE_ENV'], 'production')
         })
 
@@ -62,7 +62,7 @@ describe('Environment Variables', () => {
             const action = new Action('test')
                 .env('TEST_VAR', 'test_value')
                 .shell('echo $TEST_VAR')
-            
+
             assert.strictEqual(action._envVars['TEST_VAR'], 'test_value')
         })
 
@@ -70,7 +70,7 @@ describe('Environment Variables', () => {
             const action = new Action('test')
                 .env('CUSTOM_VAR', 'custom')
                 .shell('echo test')
-            
+
             assert.strictEqual(action._envVars['CUSTOM_VAR'], 'custom')
         })
 
@@ -79,7 +79,7 @@ describe('Environment Variables', () => {
             const action = new Action('test')
                 .env('PATH', '/custom/path')
                 .shell('echo $PATH')
-            
+
             // Verify custom PATH is set in action
             assert.strictEqual(action._envVars['PATH'], '/custom/path')
             // Verify process.env is unchanged
@@ -94,7 +94,7 @@ describe('Environment Variables', () => {
                     VAR3: 'value3'
                 })
                 .shell('test')
-            
+
             assert.strictEqual(action._envVars['VAR1'], 'value1')
             assert.strictEqual(action._envVars['VAR2'], 'value2')
             assert.strictEqual(action._envVars['VAR3'], 'value3')
@@ -112,14 +112,14 @@ describe('Environment Variables', () => {
                 .prompt('apiKey', 'Enter API key')
                 .env('API_KEY', '{{apiKey}}')
                 .shell('deploy.sh')
-            
+
             assert.strictEqual(action._envVars['API_KEY'], '{{apiKey}}')
         })
 
         it('should placeholder replacement works with env vars', () => {
             const envVarWithPlaceholder = 'API_KEY={{apiKey}}'
             const promptValues = { apiKey: 'secret123' }
-            
+
             const result = replacePromptPlaceholders(envVarWithPlaceholder, promptValues)
             assert.strictEqual(result, 'API_KEY=secret123')
         })
@@ -135,7 +135,7 @@ describe('Environment Variables', () => {
                     DEPLOY_REGION: '{{region}}'
                 })
                 .shell('deploy.sh')
-            
+
             assert.strictEqual(action._envVars['DEPLOY_ENV'], '{{env}}')
             assert.strictEqual(action._envVars['DEPLOY_VERSION'], '{{version}}')
             assert.strictEqual(action._envVars['DEPLOY_REGION'], '{{region}}')
@@ -150,7 +150,7 @@ describe('Environment Variables', () => {
                     LOG_LEVEL: 'info'
                 })
                 .shell('npm start')
-            
+
             assert.strictEqual(action._envVars['API_TOKEN'], '{{token}}')
             assert.strictEqual(action._envVars['NODE_ENV'], 'production')
             assert.strictEqual(action._envVars['LOG_LEVEL'], 'info')
@@ -161,7 +161,7 @@ describe('Environment Variables', () => {
                 .select('env', 'Choose environment', ['dev', 'staging', 'prod'])
                 .env('DEPLOY_ENV', '{{env}}')
                 .shell('deploy.sh')
-            
+
             assert.strictEqual(action._envVars['DEPLOY_ENV'], '{{env}}')
         })
 
@@ -171,9 +171,9 @@ describe('Environment Variables', () => {
                 .prompt('port', 'Port')
                 .env('DATABASE_URL', 'postgres://{{host}}:{{port}}/db')
                 .shell('migrate.sh')
-            
+
             assert.strictEqual(action._envVars['DATABASE_URL'], 'postgres://{{host}}:{{port}}/db')
-            
+
             // Test that replacement would work correctly
             const result = replacePromptPlaceholders(
                 action._envVars['DATABASE_URL'],
@@ -189,7 +189,7 @@ describe('Environment Variables', () => {
                 .env('TEST_VAR', 'test_value')
                 .shell('echo first')
                 .then('echo second')
-            
+
             assert.strictEqual(action._envVars['TEST_VAR'], 'test_value')
             assert.strictEqual(action._chains.length, 1)
         })
@@ -199,7 +199,7 @@ describe('Environment Variables', () => {
                 .env('ERROR_VAR', 'error_value')
                 .shell('failing-command')
                 .onError('echo error')
-            
+
             assert.strictEqual(action._envVars['ERROR_VAR'], 'error_value')
             assert.strictEqual(action._chains.length, 1)
         })
@@ -210,7 +210,7 @@ describe('Environment Variables', () => {
                 .shell('echo first')
                 .then('echo second', { cwd: '/custom/path' })
                 .then('echo third')
-            
+
             assert.strictEqual(action._envVars['SHARED_VAR'], 'shared')
             assert.strictEqual(action._chains.length, 2)
         })
@@ -221,7 +221,7 @@ describe('Environment Variables', () => {
             const action = new Action('test')
                 .env('ASYNC_VAR', 'async_value')
                 .shell('long-running-task', { async: true })
-            
+
             assert.strictEqual(action._envVars['ASYNC_VAR'], 'async_value')
         })
     })
@@ -232,7 +232,7 @@ describe('Environment Variables', () => {
             q.action('Production Deploy')
                 .env('DEPLOY_ENV', 'production')
                 .shell('deploy.sh')
-            
+
             const action = q._items[0] as Action
             assert.strictEqual(action._envVars['DEPLOY_ENV'], 'production')
         })
@@ -247,7 +247,7 @@ describe('Environment Variables', () => {
                 .shell('npm run build')
                 .then('npm test')
                 .then('npm run deploy')
-            
+
             assert.strictEqual(action._envVars['VERSION'], '{{version}}')
             assert.strictEqual(action._envVars['NODE_ENV'], 'production')
             assert.strictEqual(action._chains.length, 2)
@@ -258,7 +258,7 @@ describe('Environment Variables', () => {
                 .env('CUSTOM_VAR', 'value')
                 .shellOptions({ cwd: '/custom/path' })
                 .shell('test')
-            
+
             assert.strictEqual(action._envVars['CUSTOM_VAR'], 'value')
             assert.strictEqual(action._shellOptions.cwd, '/custom/path')
         })
@@ -268,7 +268,7 @@ describe('Environment Variables', () => {
                 .env('DANGER_VAR', 'true')
                 .requireConfirmation('Are you sure?')
                 .shell('rm -rf /')
-            
+
             assert.strictEqual(action._envVars['DANGER_VAR'], 'true')
             assert.strictEqual(action._confirmMessage, 'Are you sure?')
         })
@@ -294,7 +294,7 @@ describe('Environment Variables', () => {
             const action = new Action('test')
                 .env('TEST_VAR', 'value')
                 .javascript(() => console.log('test'))
-            
+
             // Env vars are stored but won't be used for JS actions
             assert.strictEqual(action._envVars['TEST_VAR'], 'value')
         })

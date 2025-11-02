@@ -19,7 +19,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .capture()
                 .shell('echo "hello"')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._shell, 'echo "hello"')
         })
@@ -30,7 +30,7 @@ describe('Output Handling', () => {
                 .capture()
                 .shell('echo {{name}}')
                 .then('echo "Output: {{output}}"')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._prompts.length, 1)
             assert.strictEqual(action._chains.length, 1)
@@ -42,7 +42,7 @@ describe('Output Handling', () => {
                 .capture()
                 .shell('echo "Main"')
                 .after('echo "After: {{output}}"')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._beforeHooks.length, 1)
             assert.strictEqual(action._afterHooks.length, 1)
@@ -65,7 +65,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .silent()
                 .shell('npm install')
-            
+
             assert.strictEqual(action._silentOutput, true)
             assert.strictEqual(action._shell, 'npm install')
         })
@@ -76,7 +76,7 @@ describe('Output Handling', () => {
                 .silent()
                 .shell('npm install {{pkg}}')
                 .notify('Package installed!')
-            
+
             assert.strictEqual(action._silentOutput, true)
             assert.strictEqual(action._prompts.length, 1)
             assert.strictEqual(action._notifyMessage, 'Package installed!')
@@ -87,7 +87,7 @@ describe('Output Handling', () => {
                 .env('NODE_ENV', 'production')
                 .silent()
                 .shell('npm run build')
-            
+
             assert.strictEqual(action._silentOutput, true)
             assert.strictEqual(action._envVars['NODE_ENV'], 'production')
         })
@@ -110,7 +110,7 @@ describe('Output Handling', () => {
                 .prompt('env', 'Environment')
                 .shell('deploy --env {{env}}')
                 .notify('Deployed to {{env}}!')
-            
+
             assert.strictEqual(action._notifyMessage, 'Deployed to {{env}}!')
             assert.strictEqual(action._prompts.length, 1)
         })
@@ -120,7 +120,7 @@ describe('Output Handling', () => {
                 .capture()
                 .shell('git rev-parse HEAD')
                 .notify('Commit: {{output}}')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._notifyMessage, 'Commit: {{output}}')
         })
@@ -131,7 +131,7 @@ describe('Output Handling', () => {
                 .prompt('env', 'Environment')
                 .shell('deploy --version {{version}} --env {{env}}')
                 .notify('Deployed version {{version}} to {{env}}!')
-            
+
             assert.strictEqual(action._notifyMessage, 'Deployed version {{version}} to {{env}}!')
             assert.strictEqual(action._prompts.length, 2)
         })
@@ -148,7 +148,7 @@ describe('Output Handling', () => {
                 .capture()
                 .shell('echo "result"')
                 .notify('Output: {{output}}')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._notifyMessage, 'Output: {{output}}')
         })
@@ -158,7 +158,7 @@ describe('Output Handling', () => {
                 .silent()
                 .shell('npm install')
                 .notify('Installation complete!')
-            
+
             assert.strictEqual(action._silentOutput, true)
             assert.strictEqual(action._notifyMessage, 'Installation complete!')
         })
@@ -168,7 +168,7 @@ describe('Output Handling', () => {
                 .capture()
                 .silent()
                 .shell('echo "test"')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._silentOutput, true)
         })
@@ -179,7 +179,7 @@ describe('Output Handling', () => {
                 .silent()
                 .shell('node script.js')
                 .notify('Script output: {{output}}')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._silentOutput, true)
             assert.strictEqual(action._notifyMessage, 'Script output: {{output}}')
@@ -194,7 +194,7 @@ describe('Output Handling', () => {
                 .capture()
                 .shell('deploy --name {{name}} --env {{env}}')
                 .notify('Deployed {{name}} to {{env}}: {{output}}')
-            
+
             assert.strictEqual(action._prompts.length, 2)
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._notifyMessage, 'Deployed {{name}} to {{env}}: {{output}}')
@@ -207,7 +207,7 @@ describe('Output Handling', () => {
                 .then('echo "Commit: {{output}}"')
                 .then('git log -1 --pretty=%B')
                 .notify('Deployed commit {{output}}')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._chains.length, 2)
             assert.strictEqual(action._notifyMessage, 'Deployed commit {{output}}')
@@ -219,7 +219,7 @@ describe('Output Handling', () => {
                 .shell('npm test')
                 .onError('echo "Tests failed"')
                 .notify('Tests completed')
-            
+
             assert.strictEqual(action._silentOutput, true)
             assert.strictEqual(action._chains.length, 1)
             assert.strictEqual(action._chains[0].onError, true)
@@ -232,7 +232,7 @@ describe('Output Handling', () => {
                 .silent()
                 .shell('npm run build')
                 .notify('Build complete!')
-            
+
             assert.strictEqual(action._envVars['NODE_ENV'], 'production')
             assert.strictEqual(action._envVars['DEBUG'], 'false')
             assert.strictEqual(action._silentOutput, true)
@@ -245,7 +245,7 @@ describe('Output Handling', () => {
                 .silent()
                 .shell('deploy --env {{env}}')
                 .notify('Deployed to {{env}}!')
-            
+
             assert.strictEqual(action._confirmMessage, 'Deploy to {{env}}?')
             assert.strictEqual(action._silentOutput, true)
         })
@@ -257,7 +257,7 @@ describe('Output Handling', () => {
                 .shell('npm run build')
                 .after('echo "Build output: {{output}}"')
                 .notify('Build finished!')
-            
+
             assert.strictEqual(action._beforeHooks.length, 1)
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._afterHooks.length, 1)
@@ -270,7 +270,7 @@ describe('Output Handling', () => {
                 .silent()
                 .shell('npm test')
                 .notify('Tests passed in {{dir}}!')
-            
+
             assert.strictEqual(action._workingDir, './projects/{{dir}}')
             assert.strictEqual(action._silentOutput, true)
         })
@@ -281,7 +281,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .capture()
                 .shell('echo "test"')
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._shell, 'echo "test"')
         })
@@ -290,7 +290,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .shell('echo "test"')
                 .capture()
-            
+
             assert.strictEqual(action._captureOutput, true)
             assert.strictEqual(action._shell, 'echo "test"')
         })
@@ -299,7 +299,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .silent()
                 .shell('npm install')
-            
+
             assert.strictEqual(action._silentOutput, true)
         })
 
@@ -307,7 +307,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .shell('npm install')
                 .silent()
-            
+
             assert.strictEqual(action._silentOutput, true)
         })
 
@@ -315,7 +315,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .notify('Done!')
                 .shell('npm test')
-            
+
             assert.strictEqual(action._notifyMessage, 'Done!')
         })
 
@@ -323,7 +323,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .shell('npm test')
                 .notify('Done!')
-            
+
             assert.strictEqual(action._notifyMessage, 'Done!')
         })
     })
@@ -333,21 +333,21 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .capture()
                 .shell('echo ""')
-            
+
             assert.strictEqual(action._captureOutput, true)
         })
 
         it('should handle notify() with special characters', () => {
             const action = new Action('test')
                 .notify('Build ✓ complete! @#$%^&*()')
-            
+
             assert.strictEqual(action._notifyMessage, 'Build ✓ complete! @#$%^&*()')
         })
 
         it('should handle notify() with newlines', () => {
             const action = new Action('test')
                 .notify('Line 1\nLine 2\nLine 3')
-            
+
             assert.strictEqual(action._notifyMessage, 'Line 1\nLine 2\nLine 3')
         })
 
@@ -355,7 +355,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .notify('First message')
                 .notify('Second message')
-            
+
             assert.strictEqual(action._notifyMessage, 'Second message')
         })
 
@@ -363,7 +363,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .capture()
                 .shell('cat /dev/urandom | head -c 1000')
-            
+
             assert.strictEqual(action._captureOutput, true)
         })
 
@@ -371,7 +371,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .silent()
                 .javascript(() => console.log('test'))
-            
+
             // Silent flag is set but won't affect JavaScript actions
             assert.strictEqual(action._silentOutput, true)
         })
@@ -381,7 +381,7 @@ describe('Output Handling', () => {
                 .prompt('name', 'Name')
                 .shell('echo {{name}}')
                 .notify('Hello {{name}}!')
-            
+
             assert.strictEqual(action._notifyMessage, 'Hello {{name}}!')
         })
 
@@ -389,7 +389,7 @@ describe('Output Handling', () => {
             const action = new Action('test')
                 .capture()
                 .shell('exit 1')
-            
+
             // Capture flag should be set regardless of command success
             assert.strictEqual(action._captureOutput, true)
         })
@@ -410,7 +410,7 @@ describe('Output Handling', () => {
                 .onError('rollback.sh')
                 .after('echo "Deployment ID: {{output}}"')
                 .notify('✓ Deployed v{{version}} to {{env}}: {{output}}')
-            
+
             assert.strictEqual(action._prompts.length, 2)
             assert.strictEqual(action._confirmMessage, 'Deploy v{{version}} to {{env}}?')
             assert.strictEqual(action._workingDir, './deployment')
@@ -436,7 +436,7 @@ describe('Output Handling', () => {
                 .then('npm run coverage')
                 .onError('npm run cleanup')
                 .notify('CI pipeline completed for {{target}}')
-            
+
             assert.strictEqual(action._prompts.length, 1)
             assert.strictEqual(action._envVars['NODE_ENV'], '{{target}}')
             assert.strictEqual(action._envVars['CI'], 'true')
@@ -456,7 +456,7 @@ describe('Output Handling', () => {
                 .then('validate {{output}}')
                 .after('echo "Processed: {{output}}"')
                 .notify('✓ Processed {{input}} → {{output}}\nRecords: {{output}}')
-            
+
             assert.strictEqual(action._prompts.length, 2)
             assert.strictEqual(action._beforeHooks.length, 1)
             assert.strictEqual(action._captureOutput, true)

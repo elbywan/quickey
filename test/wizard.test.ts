@@ -27,7 +27,7 @@ describe('Wizard', () => {
 
             assert.strictEqual(step.prompts.length, 1)
             assert.strictEqual(typeof step.when, 'function')
-            
+
             // Test when condition
             assert.strictEqual(step.when!({ projectType: 'web' }), true)
             assert.strictEqual(step.when!({ projectType: 'cli' }), false)
@@ -79,7 +79,7 @@ describe('Wizard', () => {
     describe('Action.wizard()', () => {
         it('should add wizard steps to action', () => {
             const action = new Action('test', 'Test action')
-            
+
             const steps: WizardStep[] = [
                 {
                     prompts: [
@@ -103,7 +103,7 @@ describe('Wizard', () => {
 
         it('should support method chaining', () => {
             const action = new Action('test', 'Test action')
-            
+
             const result = action.wizard([
                 {
                     prompts: [
@@ -117,7 +117,7 @@ describe('Wizard', () => {
 
         it('should work with shell command', () => {
             const action = new Action('create', 'Create project')
-            
+
             action.wizard([
                 {
                     prompts: [
@@ -137,7 +137,7 @@ describe('Wizard', () => {
 
         it('should replace wizard step', () => {
             const action = new Action('test', 'Test action')
-            
+
             action.wizard([
                 {
                     prompts: [{ name: 'old', message: 'Old' }]
